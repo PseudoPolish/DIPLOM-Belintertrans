@@ -1,0 +1,20 @@
+{
+  "name": "practice_1",
+  "version": "0.0.0",
+  "description": "PRACTICE_1",
+  "main": "server.js",
+  "author": {
+    "name": ""
+  },
+  "devDependencies": {
+    "eslint": "^8.21.0",
+    "tailwindcss": "^4.1.7"
+  },
+  "eslintConfig": {},
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "react-router-dom": "^7.6.0",
+    "sqlite3": "^5.1.7"
+  }
+}

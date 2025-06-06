@@ -1,0 +1,88 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.form-container {
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    padding: 40px;
+    text-align: center;
+    position: relative;
+}
+
+/* Место для логотипа */
+.form-container::before {
+    content: '';
+    background: url('logo.png') no-repeat center/contain;
+    position: absolute;
+    top: -160px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 100px;
+}
+
+.form-container h2 {
+    color: #333;
+    margin-bottom: 30px;
+}
+
+input {
+    width: 90%;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: #55a6e2;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    background-color: #55a6e2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #408fc3;
+}
+
+.error-message {
+    color: #e74c3c;
+    margin-top: 10px;
+}
+
+a {
+    color: #55a6e2;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #408fc3;
+}
+
+/* Дополнительные стили для формы регистрации */
+#register-form {
+    display: none;
+}

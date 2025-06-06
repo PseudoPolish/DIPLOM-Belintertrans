@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация и Вход</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Bootstrap для современного дизайна -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- React и ReactDOM через CDN -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+
+</head>
+<body>
+    <div id="login-form" class="form-container">
+        <h2>Вход</h2>
+        <form id="loginForm">
+            <input type="text" id="username" placeholder="Логин" required>
+            <input type="password" id="password" placeholder="Пароль" required>
+            <button type="submit">Войти</button>
+        </form>
+        <p>Нет аккаунта? <a href="#" onclick="toggleForm()">Зарегистрируйтесь</a></p>
+        <p id="error-message" class="error-message"></p>
+    </div>
+
+    <div id="register-form" class="form-container" style="display: none;">
+        <h2>Регистрация</h2>
+        <form id="registerForm">
+            <input type="text" id="newUsername" placeholder="Новый логин" required>
+            <input type="password" id="newPassword" placeholder="Новый пароль" required>
+            <button type="submit">Зарегистрироваться</button>
+        </form>
+        <p>Уже есть аккаунт? <a href="#" onclick="toggleForm()">Войти</a></p>
+        <p id="register-message" class="error-message"></p>
+    </div>
+
+    <div id="dashboard" class="dashboard" style="display: none;">
+        <h2>Добро пожаловать, <span id="currentUser"></span></h2>
+        <nav class="dashboard-nav">
+            <ul>
+                <li>
+                    <button class="dashboard-button" onclick="loadSection('cargo')">
+                        <span class="button-text">Управление Грузами</span>
+                        <span class="button-icon" style="background-image: url('cargo-icon.png');"></span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dashboard-button" onclick="loadSection('staff')">
+                        <span class="button-text">Управление Персоналом</span>
+                        <span class="button-icon" style="background-image: url('staff-icon.png');"></span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dashboard-button" onclick="loadSection('transport')">
+                        <span class="button-text">Управление Транспортом</span>
+                        <span class="button-icon" style="background-image: url('transport-icon.png');"></span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dashboard-button" onclick="loadSection('reports')">
+                        <span class="button-text">Управление Отчётами</span>
+                        <span class="button-icon" style="background-image: url('reports-icon.png');"></span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dashboard-button" onclick="loadSection('routes')">
+                        <span class="button-text">Управление Маршрутами</span>
+                        <span class="button-icon" style="background-image: url('routes-icon.png');"></span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dashboard-button" onclick="toggleTheme()">
+                        <span class="button-text">Переключить тему</span>
+                        <span class="button-icon" style="background-image: url('theme-icon.png');"></span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dashboard-button" onclick="logout()">
+                        <span class="button-text">Выход</span>
+                        <span class="button-icon" style="background-image: url('logout-icon.png');"></span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+        <div id="contentArea"></div>
+    </div>
+
+    <div class="wip-message">WORK IN PROGRESS</div>
+
+    <script src="script.js"></script>
+
+    <div class="modal fade" id="tableModal" tabindex="-1" role="dialog" aria-labelledby="tableModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <!-- modal-xl для увеличенной ширины -->
+            <div class="modal-content">
+                <div class="modal-body" id="modalContentArea">
+                    <!-- Здесь будет отображаться таблица через React -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
