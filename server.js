@@ -1,3 +1,4 @@
+// ФАЙЛ SERVER.JS 
 const express = require('express');
 const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
@@ -9,13 +10,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// Инициализация базы данных SQLite
 const db = new sqlite3.Database('./database.db', (err) => {
     if (err) console.error('Ошибка подключения к базе данных:', err);
     else console.log('Подключено к базе данных SQLite');
 });
 
-// Создание таблиц при запуске сервера
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS users (
@@ -25,7 +24,7 @@ db.serialize(() => {
         )`);
     db.run(`
         CREATE TABLE IF NOT EXISTS cargo (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             type TEXT NOT NULL,
             sender TEXT NOT NULL,
@@ -36,7 +35,7 @@ db.serialize(() => {
         )`);
     db.run(`
         CREATE TABLE IF NOT EXISTS staff (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             fullName TEXT NOT NULL,
             position TEXT NOT NULL,
             hireDate TEXT NOT NULL,
@@ -45,7 +44,7 @@ db.serialize(() => {
         )`);
     db.run(`
         CREATE TABLE IF NOT EXISTS transport (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             type TEXT NOT NULL,
             model TEXT NOT NULL,
             licensePlate TEXT NOT NULL,
@@ -56,7 +55,7 @@ db.serialize(() => {
         )`);
     db.run(`
         CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             type TEXT NOT NULL,
             creationDate TEXT NOT NULL,
             reportPeriod TEXT NOT NULL,
@@ -66,7 +65,7 @@ db.serialize(() => {
         )`);
     db.run(`
         CREATE TABLE IF NOT EXISTS routes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             transportId INTEGER NOT NULL,
             startPoint TEXT NOT NULL,
             endPoint TEXT NOT NULL,
@@ -78,7 +77,53 @@ db.serialize(() => {
         )`);
 });
 
-// Middleware для установки кодировки
+// Функция для поиска минимального свободного ID
+function getNextAvailableId(table, callback) {
+    db.all(`SELECT id FROM ${table} ORDER BY id`, (err, rows) => {
+        if (err) return callback(err);
+        let nextId = 1;
+        for (let row of rows) {
+            if (row.id === nextId) nextId++;
+            else break;
+        }
+        callback(null, nextId);
+    });
+}
+
+// Функция для обновления ID после удаления
+function updateIdsAfterDelete(table, deletedId, callback) {
+    db.all(`SELECT * FROM ${table} WHERE id > ? ORDER BY id ASC`, [deletedId], (err, rows) => {
+        if (err) return callback(err);
+        const updates = rows.map((row, index) => {
+            const newId = deletedId + index;
+            return new Promise((resolve, reject) => {
+                db.run(`UPDATE ${table} SET id = ? WHERE id = ?`, [newId, row.id], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        });
+        Promise.all(updates).then(() => callback(null)).catch(callback);
+    });
+}
+
+// Функция для обновления внешних ключей
+function updateForeignKeysAfterDelete(referencingTable, foreignKey, referencedTable, deletedId, callback) {
+    db.all(`SELECT * FROM ${referencingTable} WHERE ${foreignKey} > ?`, [deletedId], (err, rows) => {
+        if (err) return callback(err);
+        const updates = rows.map(row => {
+            const newForeignKey = row[foreignKey] - 1;
+            return new Promise((resolve, reject) => {
+                db.run(`UPDATE ${referencingTable} SET ${foreignKey} = ? WHERE id = ?`, [newForeignKey, row.id], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        });
+        Promise.all(updates).then(() => callback(null)).catch(callback);
+    });
+}
+
 app.use((req, res, next) => {
     res.setHeader('Content-Type', 'text/html; charset=UTF-8');
     next();
@@ -128,17 +173,18 @@ app.get('/cargo', (req, res) => {
     });
 });
 
-// POST /cargo
 app.post('/cargo', (req, res) => {
     const { name, type, sender, receiver, routeId, handlingCost } = req.body;
-    db.run('INSERT INTO cargo (name, type, sender, receiver, routeId, handlingCost) VALUES (?, ?, ?, ?, ?, ?)',
-        [name, type, sender, receiver, routeId, handlingCost || 0], function (err) {
-            if (err) return res.status(500).json({ message: 'Ошибка при добавлении груза' });
-            res.json({ message: 'Груз добавлен', cargo: { id: this.lastID, name, type, sender, receiver, routeId, handlingCost: handlingCost || 0 } });
-        });
+    getNextAvailableId('cargo', (err, nextId) => {
+        if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+        db.run('INSERT INTO cargo (id, name, type, sender, receiver, routeId, handlingCost) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [nextId, name, type, sender, receiver, routeId, handlingCost || 0], function (err) {
+                if (err) return res.status(500).json({ message: 'Ошибка при добавлении груза' });
+                res.json({ message: 'Груз добавлен', cargo: { id: nextId, name, type, sender, receiver, routeId, handlingCost: handlingCost || 0 } });
+            });
+    });
 });
 
-// PUT /cargo/:id
 app.put('/cargo/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { name, type, sender, receiver, routeId, handlingCost } = req.body;
@@ -157,7 +203,10 @@ app.delete('/cargo/:id', (req, res) => {
         if (!row) return res.status(404).json({ message: 'Груз не найден' });
         db.run('DELETE FROM cargo WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ message: 'Ошибка при удалении' });
-            res.json({ message: 'Груз удален', cargo: row });
+            updateIdsAfterDelete('cargo', id, (err) => {
+                if (err) console.error('Ошибка при обновлении ID в cargo:', err);
+                res.json({ message: 'Груз удален', cargo: row });
+            });
         });
     });
 });
@@ -183,14 +232,16 @@ app.get('/staff', (req, res) => {
 
 app.post('/staff', (req, res) => {
     const { fullName, position, hireDate, status, salary } = req.body;
-    db.run('INSERT INTO staff (fullName, position, hireDate, status, salary) VALUES (?, ?, ?, ?, ?)',
-        [fullName, position, hireDate, status, salary || 0], function (err) {
-            if (err) return res.status(500).json({ message: 'Ошибка при добавлении сотрудника' });
-            res.json({ message: 'Сотрудник добавлен', staff: { id: this.lastID, fullName, position, hireDate, status, salary: salary || 0 } });
-        });
+    getNextAvailableId('staff', (err, nextId) => {
+        if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+        db.run('INSERT INTO staff (id, fullName, position, hireDate, status, salary) VALUES (?, ?, ?, ?, ?, ?)',
+            [nextId, fullName, position, hireDate, status, salary || 0], function (err) {
+                if (err) return res.status(500).json({ message: 'Ошибка при добавлении сотрудника' });
+                res.json({ message: 'Сотрудник добавлен', staff: { id: nextId, fullName, position, hireDate, status, salary: salary || 0 } });
+            });
+    });
 });
 
-// PUT /staff/:id
 app.put('/staff/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { fullName, position, hireDate, status, salary } = req.body;
@@ -219,7 +270,16 @@ app.delete('/staff/:id', (req, res) => {
         if (!row) return res.status(404).json({ message: 'Сотрудник не найден' });
         db.run('DELETE FROM staff WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ message: 'Ошибка при удалении' });
-            res.json({ message: 'Сотрудник удален', staff: row });
+            updateIdsAfterDelete('staff', id, (err) => {
+                if (err) console.error('Ошибка при обновлении ID в staff:', err);
+                updateForeignKeysAfterDelete('transport', 'driverId', 'staff', id, (err) => {
+                    if (err) console.error('Ошибка при обновлении driverId в transport:', err);
+                    updateForeignKeysAfterDelete('reports', 'authorId', 'staff', id, (err) => {
+                        if (err) console.error('Ошибка при обновлении authorId в reports:', err);
+                        res.json({ message: 'Сотрудник удален', staff: row });
+                    });
+                });
+            });
         });
     });
 });
@@ -247,21 +307,22 @@ app.get('/transport', (req, res) => {
     });
 });
 
-// POST /transport
 app.post('/transport', (req, res) => {
     const { type, model, licensePlate, status, driver, maintenanceCost } = req.body;
     db.get('SELECT id FROM staff WHERE fullName = ? AND position = "Водитель"', [driver], (err, row) => {
         if (err) return res.status(500).json({ message: 'Ошибка сервера' });
         const driverId = row ? row.id : null;
-        db.run('INSERT INTO transport (type, model, licensePlate, status, driverId, maintenanceCost) VALUES (?, ?, ?, ?, ?, ?)',
-            [type, model, licensePlate, status, driverId, maintenanceCost || 0], function (err) {
-                if (err) return res.status(500).json({ message: 'Ошибка при добавлении транспорта' });
-                res.json({ message: 'Транспорт добавлен', transport: { id: this.lastID, type, model, licensePlate, status, driver, maintenanceCost: maintenanceCost || 0 } });
-            });
+        getNextAvailableId('transport', (err, nextId) => {
+            if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+            db.run('INSERT INTO transport (id, type, model, licensePlate, status, driverId, maintenanceCost) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [nextId, type, model, licensePlate, status, driverId, maintenanceCost || 0], function (err) {
+                    if (err) return res.status(500).json({ message: 'Ошибка при добавлении транспорта' });
+                    res.json({ message: 'Транспорт добавлен', transport: { id: nextId, type, model, licensePlate, status, driver, maintenanceCost: maintenanceCost || 0 } });
+                });
+        });
     });
 });
 
-// PUT /transport/:id
 app.put('/transport/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { type, model, licensePlate, status, driver, maintenanceCost } = req.body;
@@ -284,7 +345,13 @@ app.delete('/transport/:id', (req, res) => {
         if (!row) return res.status(404).json({ message: 'Транспорт не найден' });
         db.run('DELETE FROM transport WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ message: 'Ошибка при удалении' });
-            res.json({ message: 'Транспорт удален', transport: row });
+            updateIdsAfterDelete('transport', id, (err) => {
+                if (err) console.error('Ошибка при обновлении ID в transport:', err);
+                updateForeignKeysAfterDelete('routes', 'transportId', 'transport', id, (err) => {
+                    if (err) console.error('Ошибка при обновлении transportId в routes:', err);
+                    res.json({ message: 'Транспорт удален', transport: row });
+                });
+            });
         });
     });
 });
@@ -317,11 +384,14 @@ app.post('/reports', (req, res) => {
     db.get('SELECT id FROM staff WHERE fullName = ? AND position = "Менеджер по логистике"', [author], (err, row) => {
         if (err) return res.status(500).json({ message: 'Ошибка сервера' });
         const authorId = row ? row.id : null;
-        db.run('INSERT INTO reports (type, creationDate, reportPeriod, authorId, status) VALUES (?, ?, ?, ?, ?)',
-            [type, creationDate, reportPeriod, authorId, status], function (err) {
-                if (err) return res.status(500).json({ message: 'Ошибка при добавлении отчета' });
-                res.json({ message: 'Отчет добавлен', report: { id: this.lastID, type, creationDate, reportPeriod, author, status } });
-            });
+        getNextAvailableId('reports', (err, nextId) => {
+            if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+            db.run('INSERT INTO reports (id, type, creationDate, reportPeriod, authorId, status) VALUES (?, ?, ?, ?, ?, ?)',
+                [nextId, type, creationDate, reportPeriod, authorId, status], function (err) {
+                    if (err) return res.status(500).json({ message: 'Ошибка при добавлении отчета' });
+                    res.json({ message: 'Отчет добавлен', report: { id: nextId, type, creationDate, reportPeriod, author, status } });
+                });
+        });
     });
 });
 
@@ -347,7 +417,10 @@ app.delete('/reports/:id', (req, res) => {
         if (!row) return res.status(404).json({ message: 'Отчет не найден' });
         db.run('DELETE FROM reports WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ message: 'Ошибка при удалении' });
-            res.json({ message: 'Отчет удален', report: row });
+            updateIdsAfterDelete('reports', id, (err) => {
+                if (err) console.error('Ошибка при обновлении ID в reports:', err);
+                res.json({ message: 'Отчет удален', report: row });
+            });
         });
     });
 });
@@ -377,15 +450,17 @@ app.post('/routes', (req, res) => {
     const { transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue } = req.body;
     db.get('SELECT * FROM transport WHERE id = ?', [transportId], (err, transport) => {
         if (err || !transport) return res.status(400).json({ message: 'Неверный транспорт' });
-        db.run('INSERT INTO routes (transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [transportId, startPoint, endPoint, estimatedTime, actualTime || null, status, revenue || 0], function (err) {
-                if (err) return res.status(500).json({ message: 'Ошибка при добавлении маршрута' });
-                res.json({ message: 'Маршрут добавлен', route: { id: this.lastID, transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue: revenue || 0 } });
-            });
+        getNextAvailableId('routes', (err, nextId) => {
+            if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+            db.run('INSERT INTO routes (id, transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [nextId, transportId, startPoint, endPoint, estimatedTime, actualTime || null, status, revenue || 0], function (err) {
+                    if (err) return res.status(500).json({ message: 'Ошибка при добавлении маршрута' });
+                    res.json({ message: 'Маршрут добавлен', route: { id: nextId, transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue: revenue || 0 } });
+                });
+        });
     });
 });
 
-// PUT /routes/:id
 app.put('/routes/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue } = req.body;
@@ -400,8 +475,6 @@ app.put('/routes/:id', (req, res) => {
     });
 });
 
-
-
 app.delete('/routes/:id', (req, res) => {
     const id = parseInt(req.params.id);
     db.get('SELECT * FROM routes WHERE id = ?', [id], (err, row) => {
@@ -409,56 +482,46 @@ app.delete('/routes/:id', (req, res) => {
         if (!row) return res.status(404).json({ message: 'Маршрут не найден' });
         db.run('DELETE FROM routes WHERE id = ?', [id], (err) => {
             if (err) return res.status(500).json({ message: 'Ошибка при удалении' });
-            res.json({ message: 'Маршрут удален', route: row });
+            updateIdsAfterDelete('routes', id, (err) => {
+                if (err) console.error('Ошибка при обновлении ID в routes:', err);
+                updateForeignKeysAfterDelete('cargo', 'routeId', 'routes', id, (err) => {
+                    if (err) console.error('Ошибка при обновлении routeId в cargo:', err);
+                    res.json({ message: 'Маршрут удален', route: row });
+                });
+            });
         });
     });
 });
 
-
+// Генерация и экспорт отчетов (без изменений)
 app.get('/generate-report', (req, res) => {
     const report = {};
-
-    // Расчет общих затрат и доходов
     db.get('SELECT SUM(salary) as totalSalary FROM staff', (err, row) => {
         if (err) return res.status(500).json({ message: 'Ошибка при расчете зарплат' });
         report.totalSalary = row.totalSalary || 0;
-
         db.get('SELECT SUM(maintenanceCost) as totalMaintenance FROM transport', (err, row) => {
             if (err) return res.status(500).json({ message: 'Ошибка при расчете затрат на транспорт' });
             report.totalMaintenance = row.totalMaintenance || 0;
-
             db.get('SELECT SUM(handlingCost) as totalHandling FROM cargo', (err, row) => {
                 if (err) return res.status(500).json({ message: 'Ошибка при расчете затрат на грузы' });
                 report.totalHandling = row.totalHandling || 0;
-
                 db.get('SELECT SUM(revenue) as totalRevenue FROM routes', (err, row) => {
                     if (err) return res.status(500).json({ message: 'Ошибка при расчете доходов' });
                     report.totalRevenue = row.totalRevenue || 0;
-
-                    // Итоговые расчеты
                     report.totalExpenses = report.totalSalary + report.totalMaintenance + report.totalHandling;
                     report.profit = report.totalRevenue - report.totalExpenses;
-
-                    // Статистика по сотрудникам
                     db.all('SELECT position, COUNT(*) as count, AVG(salary) as avgSalary FROM staff GROUP BY position', (err, rows) => {
                         if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики сотрудников' });
                         report.staffStats = rows;
-
-                        // Статистика по транспорту
                         db.all('SELECT type, COUNT(*) as count, AVG(maintenanceCost) as avgCost FROM transport GROUP BY type', (err, rows) => {
                             if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики транспорта' });
                             report.transportStats = rows;
-
-                            // Статистика по грузам
                             db.all('SELECT type, COUNT(*) as count, AVG(handlingCost) as avgCost FROM cargo GROUP BY type', (err, rows) => {
                                 if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики грузов' });
                                 report.cargoStats = rows;
-
-                                // Статистика по маршрутам
                                 db.all('SELECT status, COUNT(*) as count, AVG(revenue) as avgRevenue FROM routes GROUP BY status', (err, rows) => {
                                     if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики маршрутов' });
                                     report.routesStats = rows;
-
                                     res.json(report);
                                 });
                             });
@@ -479,43 +542,29 @@ app.get('/export-report', (req, res) => {
                 if (err) return res.status(500).json({ message: 'Ошибка при получении данных о грузах' });
                 db.all('SELECT * FROM routes', (err, routes) => {
                     if (err) return res.status(500).json({ message: 'Ошибка при получении данных о маршрутах' });
-
-                    // Получение данных для финансового отчета
                     db.get('SELECT SUM(salary) as totalSalary FROM staff', (err, salaryRow) => {
                         if (err) return res.status(500).json({ message: 'Ошибка при расчете зарплат' });
                         const totalSalary = salaryRow.totalSalary || 0;
-
                         db.get('SELECT SUM(maintenanceCost) as totalMaintenance FROM transport', (err, maintenanceRow) => {
                             if (err) return res.status(500).json({ message: 'Ошибка при расчете затрат на транспорт' });
                             const totalMaintenance = maintenanceRow.totalMaintenance || 0;
-
                             db.get('SELECT SUM(handlingCost) as totalHandling FROM cargo', (err, handlingRow) => {
                                 if (err) return res.status(500).json({ message: 'Ошибка при расчете затрат на грузы' });
                                 const totalHandling = handlingRow.totalHandling || 0;
-
                                 db.get('SELECT SUM(revenue) as totalRevenue FROM routes', (err, revenueRow) => {
                                     if (err) return res.status(500).json({ message: 'Ошибка при расчете доходов' });
                                     const totalRevenue = revenueRow.totalRevenue || 0;
-
                                     const totalExpenses = totalSalary + totalMaintenance + totalHandling;
                                     const profit = totalRevenue - totalExpenses;
-
-                                    // Статистика по таблицам
                                     db.all('SELECT position, COUNT(*) as count, AVG(salary) as avgSalary FROM staff GROUP BY position', (err, staffStats) => {
                                         if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики сотрудников' });
-
                                         db.all('SELECT type, COUNT(*) as count, AVG(maintenanceCost) as avgCost FROM transport GROUP BY type', (err, transportStats) => {
                                             if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики транспорта' });
-
                                             db.all('SELECT type, COUNT(*) as count, AVG(handlingCost) as avgCost FROM cargo GROUP BY type', (err, cargoStats) => {
                                                 if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики грузов' });
-
                                                 db.all('SELECT status, COUNT(*) as count, AVG(revenue) as avgRevenue FROM routes GROUP BY status', (err, routesStats) => {
                                                     if (err) return res.status(500).json({ message: 'Ошибка при расчете статистики маршрутов' });
-
                                                     const workbook = new ExcelJS.Workbook();
-
-                                                    // Лист 1: Сотрудники
                                                     const staffSheet = workbook.addWorksheet('Сотрудники');
                                                     staffSheet.columns = [
                                                         { header: 'ID', key: 'id', width: 10 },
@@ -526,8 +575,6 @@ app.get('/export-report', (req, res) => {
                                                         { header: 'Зарплата', key: 'salary', width: 15 }
                                                     ];
                                                     staffSheet.addRows(staff);
-
-                                                    // Лист 2: Транспорт
                                                     const transportSheet = workbook.addWorksheet('Транспорт');
                                                     transportSheet.columns = [
                                                         { header: 'ID', key: 'id', width: 10 },
@@ -538,8 +585,6 @@ app.get('/export-report', (req, res) => {
                                                         { header: 'Затраты на обслуживание', key: 'maintenanceCost', width: 20 }
                                                     ];
                                                     transportSheet.addRows(transport);
-
-                                                    // Лист 3: Грузы
                                                     const cargoSheet = workbook.addWorksheet('Грузы');
                                                     cargoSheet.columns = [
                                                         { header: 'ID', key: 'id', width: 10 },
@@ -551,8 +596,6 @@ app.get('/export-report', (req, res) => {
                                                         { header: 'Затраты на обработку', key: 'handlingCost', width: 20 }
                                                     ];
                                                     cargoSheet.addRows(cargo);
-
-                                                    // Лист 4: Маршруты
                                                     const routesSheet = workbook.addWorksheet('Маршруты');
                                                     routesSheet.columns = [
                                                         { header: 'ID', key: 'id', width: 10 },
@@ -565,15 +608,11 @@ app.get('/export-report', (req, res) => {
                                                         { header: 'Доход', key: 'revenue', width: 15 }
                                                     ];
                                                     routesSheet.addRows(routes);
-
-                                                    // Лист 5: Сводный отчет
                                                     const summarySheet = workbook.addWorksheet('Сводный отчет');
                                                     summarySheet.columns = [
                                                         { header: 'Показатель', key: 'indicator', width: 40 },
                                                         { header: 'Значение', key: 'value', width: 20 }
                                                     ];
-
-                                                    // Финансовый отчет
                                                     summarySheet.addRow({ indicator: 'Финансовый отчет', value: '' });
                                                     summarySheet.addRow({ indicator: 'Общая зарплата сотрудников', value: totalSalary.toFixed(2) });
                                                     summarySheet.addRow({ indicator: 'Общие затраты на транспорт', value: totalMaintenance.toFixed(2) });
@@ -581,8 +620,6 @@ app.get('/export-report', (req, res) => {
                                                     summarySheet.addRow({ indicator: 'Общий доход от маршрутов', value: totalRevenue.toFixed(2) });
                                                     summarySheet.addRow({ indicator: 'Общие затраты', value: totalExpenses.toFixed(2) });
                                                     summarySheet.addRow({ indicator: 'Прибыль', value: profit.toFixed(2) });
-
-                                                    // Статистика по сотрудникам
                                                     summarySheet.addRow({ indicator: 'Статистика по сотрудникам', value: '' });
                                                     staffStats.forEach(stat => {
                                                         summarySheet.addRow({
@@ -590,8 +627,6 @@ app.get('/export-report', (req, res) => {
                                                             value: stat.avgSalary.toFixed(2)
                                                         });
                                                     });
-
-                                                    // Статистика по транспорту
                                                     summarySheet.addRow({ indicator: 'Статистика по транспорту', value: '' });
                                                     transportStats.forEach(stat => {
                                                         summarySheet.addRow({
@@ -599,8 +634,6 @@ app.get('/export-report', (req, res) => {
                                                             value: stat.avgCost.toFixed(2)
                                                         });
                                                     });
-
-                                                    // Статистика по грузам
                                                     summarySheet.addRow({ indicator: 'Статистика по грузам', value: '' });
                                                     cargoStats.forEach(stat => {
                                                         summarySheet.addRow({
@@ -608,8 +641,6 @@ app.get('/export-report', (req, res) => {
                                                             value: stat.avgCost.toFixed(2)
                                                         });
                                                     });
-
-                                                    // Статистика по маршрутам
                                                     summarySheet.addRow({ indicator: 'Статистика по маршрутам', value: '' });
                                                     routesStats.forEach(stat => {
                                                         summarySheet.addRow({
@@ -617,12 +648,8 @@ app.get('/export-report', (req, res) => {
                                                             value: stat.avgRevenue.toFixed(2)
                                                         });
                                                     });
-
-                                                    // Настройка заголовков для скачивания
                                                     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
                                                     res.setHeader('Content-Disposition', 'attachment; filename=report.xlsx');
-
-                                                    // Отправка файла
                                                     workbook.xlsx.write(res).then(() => res.end());
                                                 });
                                             });
