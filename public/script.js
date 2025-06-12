@@ -1,3 +1,4 @@
+// ФАЙЛ SCRIPT.JS:
 // Маппинг классов для цветных индикаторов статусов и типов
 const typeClassMap = {
     'обычный': 'secondary',
@@ -20,11 +21,38 @@ const statusClassMap = {
     'отменен': 'danger'
 };
 
+// Компонент ConfirmDeleteModal
+const ConfirmDeleteModal = ({ onConfirm, itemId }) => {
+    const handleConfirm = () => {
+        onConfirm(itemId);
+        $('#confirmDeleteModal').modal('hide');
+    };
+
+    React.useEffect(() => {
+        $('#confirmDeleteModal').on('show.bs.modal', () => {
+            $('#tableModal').addClass('modal-dim');
+        });
+        $('#confirmDeleteModal').on('hidden.bs.modal', () => {
+            $('#tableModal').removeClass('modal-dim');
+        });
+        $('#confirmDeleteButton').off('click').on('click', handleConfirm);
+
+        return () => {
+            $('#confirmDeleteModal').off('show.bs.modal');
+            $('#confirmDeleteModal').off('hidden.bs.modal');
+            $('#confirmDeleteButton').off('click');
+        };
+    }, [itemId]);
+
+    return null;
+};
+
 // Компонент CargoTable
 const CargoTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [cargoData, setCargoData] = React.useState([]);
     const [routes, setRoutes] = React.useState([]);
+    const [itemToDelete, setItemToDelete] = React.useState(null);
 
     const fetchData = async () => {
         const cargoResponse = await fetch(`/cargo?search=${encodeURIComponent(searchQuery)}`);
@@ -58,6 +86,18 @@ const CargoTable = () => {
     const deleteCargo = async (id) => {
         await fetch(`/cargo/${id}`, { method: 'DELETE' });
         fetchData();
+    };
+
+    const confirmDelete = (id) => {
+        setItemToDelete(id);
+        $('#confirmDeleteModal').modal('show');
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteCargo(itemToDelete);
+            setItemToDelete(null);
+        }
     };
 
     const addCargo = () => {
@@ -147,7 +187,7 @@ const CargoTable = () => {
             })),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateCargo(cargo.id) }, 'Обновить'),
-                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => deleteCargo(cargo.id) }, 'Удалить')
+                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(cargo.id) }, 'Удалить')
             )
         );
     };
@@ -169,7 +209,8 @@ const CargoTable = () => {
             ),
             React.createElement('tbody', null, cargoData.map(cargo => renderRow(cargo)))
         ),
-        React.createElement('button', { className: 'btn btn-success', onClick: addCargo }, 'Добавить Груз')
+        React.createElement('button', { className: 'btn btn-success', onClick: addCargo }, 'Добавить Груз'),
+        React.createElement(ConfirmDeleteModal, { onConfirm: handleConfirmDelete, itemId: itemToDelete })
     );
 };
 
@@ -177,6 +218,7 @@ const CargoTable = () => {
 const StaffTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [staffData, setStaffData] = React.useState([]);
+    const [itemToDelete, setItemToDelete] = React.useState(null);
 
     const fetchData = async () => {
         const response = await fetch(`/staff?search=${encodeURIComponent(searchQuery)}`);
@@ -207,6 +249,18 @@ const StaffTable = () => {
     const deleteStaff = async (id) => {
         await fetch(`/staff/${id}`, { method: 'DELETE' });
         fetchData();
+    };
+
+    const confirmDelete = (id) => {
+        setItemToDelete(id);
+        $('#confirmDeleteModal').modal('show');
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteStaff(itemToDelete);
+            setItemToDelete(null);
+        }
     };
 
     const addStaff = () => {
@@ -288,7 +342,7 @@ const StaffTable = () => {
             })),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateStaff(staff.id) }, 'Обновить'),
-                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => deleteStaff(staff.id) }, 'Удалить')
+                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(staff.id) }, 'Удалить')
             )
         );
     };
@@ -310,7 +364,8 @@ const StaffTable = () => {
             ),
             React.createElement('tbody', null, staffData.map(staff => renderRow(staff)))
         ),
-        React.createElement('button', { className: 'btn btn-success', onClick: addStaff }, 'Добавить Сотрудника')
+        React.createElement('button', { className: 'btn btn-success', onClick: addStaff }, 'Добавить Сотрудника'),
+        React.createElement(ConfirmDeleteModal, { onConfirm: handleConfirmDelete, itemId: itemToDelete })
     );
 };
 
@@ -319,6 +374,7 @@ const TransportTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [transportData, setTransportData] = React.useState([]);
     const [drivers, setDrivers] = React.useState([]);
+    const [itemToDelete, setItemToDelete] = React.useState(null);
 
     const fetchData = async () => {
         const transportResponse = await fetch(`/transport?search=${encodeURIComponent(searchQuery)}`);
@@ -352,6 +408,18 @@ const TransportTable = () => {
     const deleteTransport = async (id) => {
         await fetch(`/transport/${id}`, { method: 'DELETE' });
         fetchData();
+    };
+
+    const confirmDelete = (id) => {
+        setItemToDelete(id);
+        $('#confirmDeleteModal').modal('show');
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteTransport(itemToDelete);
+            setItemToDelete(null);
+        }
     };
 
     const addTransport = () => {
@@ -441,7 +509,7 @@ const TransportTable = () => {
             })),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateTransport(transport.id) }, 'Обновить'),
-                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => deleteTransport(transport.id) }, 'Удалить')
+                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(transport.id) }, 'Удалить')
             )
         );
     };
@@ -463,7 +531,8 @@ const TransportTable = () => {
             ),
             React.createElement('tbody', null, transportData.map(transport => renderRow(transport)))
         ),
-        React.createElement('button', { className: 'btn btn-success', onClick: addTransport }, 'Добавить Транспорт')
+        React.createElement('button', { className: 'btn btn-success', onClick: addTransport }, 'Добавить Транспорт'),
+        React.createElement(ConfirmDeleteModal, { onConfirm: handleConfirmDelete, itemId: itemToDelete })
     );
 };
 
@@ -473,6 +542,7 @@ const ReportsTable = () => {
     const [reportsData, setReportsData] = React.useState([]);
     const [managers, setManagers] = React.useState([]);
     const [reportContent, setReportContent] = React.useState('');
+    const [itemToDelete, setItemToDelete] = React.useState(null);
 
     const fetchData = async () => {
         const reportsResponse = await fetch(`/reports?search=${encodeURIComponent(searchQuery)}`);
@@ -506,6 +576,18 @@ const ReportsTable = () => {
     const deleteReport = async (id) => {
         await fetch(`/reports/${id}`, { method: 'DELETE' });
         fetchData();
+    };
+
+    const confirmDelete = (id) => {
+        setItemToDelete(id);
+        $('#confirmDeleteModal').modal('show');
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteReport(itemToDelete);
+            setItemToDelete(null);
+        }
     };
 
     const addReport = () => {
@@ -609,7 +691,7 @@ const ReportsTable = () => {
             ),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateReport(report.id) }, 'Обновить'),
-                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => deleteReport(report.id) }, 'Удалить')
+                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(report.id) }, 'Удалить')
             )
         );
     };
@@ -634,7 +716,8 @@ const ReportsTable = () => {
         React.createElement('button', { className: 'btn btn-success mr-2', onClick: addReport }, 'Добавить Отчет'),
         React.createElement('button', { className: 'btn btn-primary mr-2', onClick: generateReport }, 'Сгенерировать отчет'),
         React.createElement('button', { className: 'btn btn-info', onClick: exportReport }, 'Экспортировать в Excel'),
-        React.createElement('div', { id: 'reportContent', dangerouslySetInnerHTML: { __html: reportContent } })
+        React.createElement('div', { id: 'reportContent', dangerouslySetInnerHTML: { __html: reportContent } }),
+        React.createElement(ConfirmDeleteModal, { onConfirm: handleConfirmDelete, itemId: itemToDelete })
     );
 };
 
@@ -643,6 +726,7 @@ const RoutesTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [routesData, setRoutesData] = React.useState([]);
     const [transport, setTransport] = React.useState([]);
+    const [itemToDelete, setItemToDelete] = React.useState(null);
 
     const fetchData = async () => {
         const routesResponse = await fetch(`/routes?search=${encodeURIComponent(searchQuery)}`);
@@ -676,6 +760,18 @@ const RoutesTable = () => {
     const deleteRoute = async (id) => {
         await fetch(`/routes/${id}`, { method: 'DELETE' });
         fetchData();
+    };
+
+    const confirmDelete = (id) => {
+        setItemToDelete(id);
+        $('#confirmDeleteModal').modal('show');
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteRoute(itemToDelete);
+            setItemToDelete(null);
+        }
     };
 
     const addRoute = () => {
@@ -779,7 +875,7 @@ const RoutesTable = () => {
             })),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateRoute(route.id) }, 'Обновить'),
-                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => deleteRoute(route.id) }, 'Удалить')
+                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(route.id) }, 'Удалить')
             )
         );
     };
@@ -801,7 +897,8 @@ const RoutesTable = () => {
             ),
             React.createElement('tbody', null, routesData.map(route => renderRow(route)))
         ),
-        React.createElement('button', { className: 'btn btn-success', onClick: addRoute }, 'Добавить Маршрут')
+        React.createElement('button', { className: 'btn btn-success', onClick: addRoute }, 'Добавить Маршрут'),
+        React.createElement(ConfirmDeleteModal, { onConfirm: handleConfirmDelete, itemId: itemToDelete })
     );
 };
 
@@ -872,7 +969,6 @@ function loadSection(section) {
     const modalContentArea = document.getElementById('modalContentArea');
     let tableComponent;
 
-    // Установка компонента в зависимости от выбранной секции
     if (section === 'cargo') {
         tableComponent = React.createElement(CargoTable);
     } else if (section === 'staff') {
@@ -885,10 +981,7 @@ function loadSection(section) {
         tableComponent = React.createElement(RoutesTable);
     }
 
-    // Отрисовка таблицы в модальном окне
     ReactDOM.render(tableComponent, modalContentArea);
-
-    // Открытие модального окна
     $('#tableModal').modal('show');
 }
 
