@@ -1,3 +1,4 @@
+<!-- ФАЙЛ INDEX.HTML: -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -10,7 +11,6 @@
     <!-- React и ReactDOM через CDN -->
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-
 </head>
 <body>
     <div id="login-form" class="form-container">
@@ -86,13 +86,12 @@
         <div id="contentArea"></div>
     </div>
 
-    <div class="wip-message">WORK IN PROGRESS</div>
+    <div class="wip-message">АВТОМАТИЗИРОВАННОЕ РАБОЧЕЕ МЕСТО ДИСПЕТЧЕРА РЛУП "БЕЛИНТЕРТРАНС" 2025 (C)</div>
 
     <script src="script.js"></script>
 
     <div class="modal fade" id="tableModal" tabindex="-1" role="dialog" aria-labelledby="tableModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl" role="document">
-            <!-- modal-xl для увеличенной ширины -->
             <div class="modal-content">
                 <div class="modal-body" id="modalContentArea">
                     <!-- Здесь будет отображаться таблица через React -->
@@ -100,6 +99,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Добавление модального окна подтверждения -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmDeleteModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Вы уверены, что хотите удалить эту запись?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteButton">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
