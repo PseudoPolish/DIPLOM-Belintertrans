@@ -1,3 +1,4 @@
+/*Р¤РђР™Р› STYLES.CSS*/
 body {
     font-family: 'Arial', sans-serif;
     background: #f4f4f9;
@@ -21,7 +22,7 @@ body {
 
     .form-container::before {
         content: '';
-        background: url('logo.png') no-repeat center/contain;
+        background: url('logo.png') no-repeat center;
         position: absolute;
         top: -160px;
         left: 50%;
@@ -144,7 +145,7 @@ a {
 }
 
 .table-container {
-    width: 100%; /* Таблица занимает всю ширину модального окна */
+    width: 100%;
     padding: 20px;
     background: #fff;
     border-radius: 10px;
@@ -238,13 +239,98 @@ a {
         color: #fff;
     }
 
-/* Настройка ширины модального окна */
+    .dark-theme .modal-content {
+        background-color: #333;
+        color: #fff;
+    }
+
+    .dark-theme .modal-header,
+    .dark-theme .modal-footer {
+        border-color: #555;
+    }
+
+    .dark-theme .modal-title {
+        color: #fff;
+    }
+
+    .dark-theme .close {
+        color: #fff;
+    }
+
+    .dark-theme .btn-secondary {
+        background-color: #555;
+        border-color: #555;
+        color: #fff;
+    }
+
+    .dark-theme .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: #fff;
+    }
+
 .modal-content {
     width: 120% !important;
 }
 
-/* Таблица внутри модального окна */
 .modal-body .table-container {
     width: 100%;
     overflow-x: auto;
+}
+
+.modal-dim {
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+/* РЎС‚РёР»Рё РґР»СЏ С†РІРµС‚РЅРѕР№ СЃС‚РёР»РёР·Р°С†РёРё СЃС‚Р°С‚СѓСЃРѕРІ РІ select */
+.form-control.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.form-control.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.form-control.badge-warning {
+    background-color: #ffc107;
+    color: black;
+}
+
+.form-control.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.form-control.badge-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.form-control.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+/* РЈР»СѓС‡С€РµРЅРёРµ С‡РёС‚Р°РµРјРѕСЃС‚Рё С‚РµРєСЃС‚Р° РІ С‚РµРјРЅРѕР№ С‚РµРјРµ */
+.dark-theme .form-control.badge-secondary,
+.dark-theme .form-control.badge-danger,
+.dark-theme .form-control.badge-warning,
+.dark-theme .form-control.badge-success,
+.dark-theme .form-control.badge-primary,
+.dark-theme .form-control.badge-info {
+    color: white;
+}
+
+/* РЈР±РёСЂР°РµРј СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РІРёРґ СЃС‚СЂРµР»РєРё РІ С‚РµРјРЅРѕР№ С‚РµРјРµ РґР»СЏ РµРґРёРЅРѕРѕР±СЂР°Р·РёСЏ */
+.dark-theme .form-control {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M8%2011L13%206H3L8%2011Z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
 }
