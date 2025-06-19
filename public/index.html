@@ -16,9 +16,9 @@
     <div id="login-form" class="form-container">
         <h2>Вход</h2>
         <form id="loginForm">
-            <input type="text" id="username" placeholder="Логин" required>
-            <input type="password" id="password" placeholder="Пароль" required>
-            <button type="submit">Войти</button>
+            <input type="text" id="username" placeholder="Логин" class="form-control mb-3" required>
+            <input type="password" id="password" placeholder="Пароль" class="form-control mb-3" required>
+            <button type="submit" class="btn btn-primary btn-block">Войти</button>
         </form>
         <p>Нет аккаунта? <a href="#" onclick="toggleForm()">Зарегистрируйтесь</a></p>
         <p id="error-message" class="error-message"></p>
@@ -27,9 +27,9 @@
     <div id="register-form" class="form-container" style="display: none;">
         <h2>Регистрация</h2>
         <form id="registerForm">
-            <input type="text" id="newUsername" placeholder="Новый логин" required>
-            <input type="password" id="newPassword" placeholder="Новый пароль" required>
-            <button type="submit">Зарегистрироваться</button>
+            <input type="text" id="newUsername" placeholder="Новый логин" class="form-control mb-3" required>
+            <input type="password" id="newPassword" placeholder="Новый пароль" class="form-control mb-3" required>
+            <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
         </form>
         <p>Уже есть аккаунт? <a href="#" onclick="toggleForm()">Войти</a></p>
         <p id="register-message" class="error-message"></p>
@@ -39,43 +39,44 @@
         <h2>Добро пожаловать, <span id="currentUser"></span></h2>
         <nav class="dashboard-nav">
             <ul>
-                <li>
+                <li class="mb-3">
                     <button class="dashboard-button" onclick="loadSection('cargo')">
                         <span class="button-text">Управление Грузами</span>
                         <span class="button-icon" style="background-image: url('cargo-icon.png');"></span>
                     </button>
                 </li>
-                <li>
+                <li class="mb-3">
                     <button class="dashboard-button" onclick="loadSection('staff')">
                         <span class="button-text">Управление Персоналом</span>
                         <span class="button-icon" style="background-image: url('staff-icon.png');"></span>
                     </button>
                 </li>
-                <li>
+                <li class="mb-3">
                     <button class="dashboard-button" onclick="loadSection('transport')">
                         <span class="button-text">Управление Транспортом</span>
                         <span class="button-icon" style="background-image: url('transport-icon.png');"></span>
                     </button>
                 </li>
-                <li>
+                <li class="mb-3">
                     <button class="dashboard-button" onclick="loadSection('reports')">
                         <span class="button-text">Управление Отчётами</span>
                         <span class="button-icon" style="background-image: url('reports-icon.png');"></span>
                     </button>
                 </li>
-                <li>
+                <li class="mb-3">
                     <button class="dashboard-button" onclick="loadSection('routes')">
                         <span class="button-text">Управление Маршрутами</span>
                         <span class="button-icon" style="background-image: url('routes-icon.png');"></span>
                     </button>
                 </li>
-                <li>
+                <li class="mb-3 mt-5">
+                    <!-- Добавлен mt-4 для визуального разграничения -->
                     <button class="dashboard-button" onclick="toggleTheme()">
                         <span class="button-text">Переключить тему</span>
                         <span class="button-icon" style="background-image: url('theme-icon.png');"></span>
                     </button>
                 </li>
-                <li>
+                <li class="mb-3">
                     <button class="dashboard-button" onclick="logout()">
                         <span class="button-text">Выход</span>
                         <span class="button-icon" style="background-image: url('logout-icon.png');"></span>
@@ -91,7 +92,7 @@
     <script src="script.js"></script>
 
     <div class="modal fade" id="tableModal" tabindex="-1" role="dialog" aria-labelledby="tableModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-body" id="modalContentArea">
                     <!-- Здесь будет отображаться таблица через React -->
@@ -107,7 +108,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="confirmDeleteModalLabel">Подтверждение удаления</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+                        <span aria-hidden="true">×</span>
                     </button>
                 </div>
                 <div class="modal-body">
