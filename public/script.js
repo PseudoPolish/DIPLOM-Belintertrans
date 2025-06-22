@@ -932,9 +932,24 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     });
     const data = await response.json();
     if (data.message === 'Вход выполнен успешно!') {
-        document.getElementById('login-form').style.display = 'none';
-        document.getElementById('register-form').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
+        // Плавное скрытие фона и форм
+        document.getElementById('mainContainer').style.opacity = '0';
+        document.getElementById('authContainer').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('authContainer').style.display = 'none';
+            const dashboard = document.getElementById('dashboard');
+            // Сбрасываем стили dashboard перед отображением
+            dashboard.style.display = 'block';
+            dashboard.style.opacity = '0';
+            dashboard.classList.remove('visible');
+            // Устанавливаем фон в зависимости от текущей темы
+            document.body.style.background = document.body.classList.contains('dark-theme') ? '#333' : '#f4f4f9';
+            setTimeout(() => {
+                dashboard.style.opacity = '1';
+                dashboard.classList.add('visible');
+            }, 100); // Небольшая задержка для начала анимации
+        }, 500); // Время анимации скрытия
         document.getElementById('currentUser').textContent = username;
         document.getElementById('error-message').textContent = '';
     } else {
@@ -957,14 +972,42 @@ document.getElementById('registerForm').addEventListener('submit', async (event)
 });
 
 function logout() {
-    document.getElementById('dashboard').style.display = 'none';
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-    document.getElementById('error-message').textContent = '';
-    document.getElementById('contentArea').innerHTML = '';
-}
+    const dashboard = document.getElementById('dashboard');
+    const mainContainer = document.getElementById('mainContainer');
+    const authContainer = document.getElementById('authContainer');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
 
+    // Плавное скрытие дашборда
+    dashboard.style.opacity = '0';
+    setTimeout(() => {
+        dashboard.style.display = 'none';
+        dashboard.classList.remove('visible');
+        // Очищаем содержимое dashboard для предотвращения конфликтов
+        document.getElementById('contentArea').innerHTML = '';
+        ReactDOM.unmountComponentAtNode(document.getElementById('modalContentArea')); // Очищаем React-компоненты
+
+        // Показываем mainContainer и authContainer
+        mainContainer.style.display = 'flex';
+        authContainer.style.display = 'flex';
+        mainContainer.style.opacity = '0';
+        authContainer.style.opacity = '0';
+
+        // Плавное появление стартовой страницы
+        setTimeout(() => {
+            mainContainer.style.opacity = '1';
+            authContainer.style.opacity = '1';
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+        }, 100);
+
+        // Очистка полей и контента
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('error-message').textContent = '';
+        document.getElementById('register-message').textContent = '';
+    }, 500);
+}
 function loadSection(section) {
     const modalContentArea = document.getElementById('modalContentArea');
     let tableComponent;
@@ -987,7 +1030,10 @@ function loadSection(section) {
 
 function toggleTheme() {
     document.body.classList.toggle('dark-theme');
-    localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+    const isDarkTheme = document.body.classList.contains('dark-theme');
+    localStorage.setItem('theme', isDarkTheme ? 'dark' : 'light');
+    // Обновляем фон body в зависимости от темы
+    document.body.style.background = isDarkTheme ? '#333' : '#f4f4f9';
 }
 
 window.addEventListener('load', () => {
