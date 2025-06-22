@@ -1,13 +1,121 @@
+/* ФАЙЛ STYLES.CSS */
+
 body {
     font-family: 'Arial', sans-serif;
     background: #f4f4f9;
     margin: 0;
     padding: 0;
+    height: 100vh;
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+.main-container {
+    display: flex;
+    height: 100vh;
+    transition: opacity 0.5s ease; /* Анимация для плавного скрытия */
+}
+
+.design-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(340deg, #003366, #011223); /* Градиентный синий фон */
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    transition: background-color 0.5s ease, color 0.5s ease; /* Плавный переход для темы */
+}
+
+.background-images-container {
+    width: 97%; /* Фото занимают 60% ширины */
+    height: 60%; /* Фото занимают 60% высоты */
+    position: relative;
+}
+
+.background-images {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.background-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+    .background-image.active {
+        opacity: 1;
+    }
+
+.design-content {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-family: 'Roboto', sans-serif; /* Красивый шрифт */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Тень для текста */
+}
+
+    .design-content h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+
+    .design-content p {
+        font-size: 1.2rem;
+    }
+
+.decorative-element {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    z-index: 1;
+}
+
+.top-left {
+    top: 10px;
+    left: 10px;
+}
+
+.top-right {
+    top: 10px;
+    right: 10px;
+}
+
+.bottom-left {
+    bottom: 10px;
+    left: 10px;
+}
+
+.bottom-right {
+    bottom: 10px;
+    right: 10px;
+}
+
+.auth-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+    transition: opacity 0.5s ease; /* Анимация для плавного скрытия */
+}
+
+.logo {
+
+    margin-bottom: 50px;
 }
 
 .form-container {
@@ -18,19 +126,8 @@ body {
     padding: 40px;
     text-align: center;
     position: relative;
-    transition: background-color 0.5s ease, color 0.5s ease; /* Плавный переход для темы */
+    transition: background-color 0.5s ease, color 0.5s ease;
 }
-
-    .form-container::before {
-        content: '';
-        background: url('logo.png') no-repeat center;
-        position: absolute;
-        top: -160px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 600px;
-        height: 100px;
-    }
 
     .form-container h2 {
         color: #333;
@@ -69,7 +166,7 @@ button {
     }
 
 .btn-block {
-    width: 90%; /* Соответствует ширине полей ввода */
+    width: 90%;
     margin-left: auto;
     margin-right: auto;
 }
@@ -96,8 +193,18 @@ a {
     width: 400px;
     padding: 40px;
     text-align: center;
-    transition: background-color 0.5s ease, color 0.5s ease; /* Плавный переход для темы */
+    transition: background-color 0.5s ease, color 0.5s ease, opacity 0.5s ease;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    opacity: 0; /* Изначально скрыт */
 }
+
+    .dashboard.visible {
+        opacity: 1; /* Появляется с анимацией */
+    }
 
     .dashboard h2 {
         color: #333;
@@ -154,7 +261,7 @@ a {
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.5s ease, color 0.5s ease; /* Плавный переход для темы */
+    transition: background-color 0.5s ease, color 0.5s ease;
 }
 
     .table-container h3 {
@@ -173,11 +280,10 @@ a {
     left: 0;
     width: 100%;
     text-align: center;
-    background-color: #ff0000;
+    background-color: #244082;
     color: white;
     padding: 10px 0;
     font-weight: bold;
-    animation: blink-animation 3s steps(5, start) infinite;
 }
 
 @keyframes blink-animation {
@@ -190,6 +296,15 @@ a {
     background-color: #333;
     color: #fff;
 }
+
+    .dark-theme .design-container {
+        background: linear-gradient(340deg, #003366, #011223); /* Темный градиент для темной темы */
+    }
+
+    .dark-theme .design-content h1,
+    .dark-theme .design-content p {
+        color: #fff;
+    }
 
     .dark-theme .form-container,
     .dark-theme .dashboard,
@@ -214,22 +329,7 @@ a {
             border-color: #77c1ff;
         }
 
-        .dark-theme input::placeholder { /* Стиль для плейсхолдера */
-            color: #fff; /* Белый цвет плейсхолдера */
-            opacity: 0.6; /* Полная непрозрачность */
-        }
-
-        .dark-theme input::-webkit-input-placeholder { /* Поддержка WebKit */
-            color: #fff;
-            opacity: 0.6;
-        }
-
-        .dark-theme input::-moz-placeholder { /* Поддержка Firefox */
-            color: #fff;
-            opacity: 0.6;
-        }
-
-        .dark-theme input:-ms-input-placeholder { /* Поддержка Edge */
+        .dark-theme input::placeholder {
             color: #fff;
             opacity: 0.6;
         }
@@ -248,17 +348,17 @@ a {
 
     .dark-theme .table-container th {
         background-color: #555;
-        color: #fff; /* Белый текст в заголовках */
+        color: #fff;
     }
 
     .dark-theme .table-container td {
-        background-color: #444; /* Тёмный фон для ячеек */
-        color: #fff; /* Белый текст в ячейках */
+        background-color: #444;
+        color: #fff;
         border: 1px solid #666;
     }
 
     .dark-theme .wip-message {
-        background-color: #cc0000;
+        background-color: #244082;
     }
 
     .dark-theme #contentArea {
@@ -310,7 +410,6 @@ a {
     pointer-events: none;
 }
 
-/* Стили для цветной стилизации статусов в select */
 .form-control.badge-secondary {
     background-color: #6c757d;
     color: white;
@@ -341,7 +440,6 @@ a {
     color: white;
 }
 
-/* Улучшение читаемости текста в темной теме */
 .dark-theme .form-control.badge-secondary,
 .dark-theme .form-control.badge-danger,
 .dark-theme .form-control.badge-warning,
@@ -351,7 +449,6 @@ a {
     color: white;
 }
 
-/* Стили для полей выбора в тёмной теме */
 .dark-theme select.form-control {
     background-color: #555;
     color: #fff;
@@ -365,7 +462,7 @@ a {
     padding-right: 30px;
 }
 
-/* Увеличение ширины модального окна */
 .modal-xl {
     max-width: 90% !important;
 }
+
