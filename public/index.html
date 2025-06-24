@@ -51,19 +51,10 @@
                     <input type="password" id="password" placeholder="Пароль" class="form-control mb-3" required>
                     <button type="submit" class="btn btn-primary btn-block">Войти</button>
                 </form>
-                <p>Нет аккаунта? <a href="#" onclick="toggleForm()">Зарегистрируйтесь</a></p>
+              
                 <p id="error-message" class="error-message"></p>
             </div>
-            <div id="register-form" class="form-container" style="display: none;">
-                <h2>Регистрация</h2>
-                <form id="registerForm">
-                    <input type="text" id="newUsername" placeholder="Новый логин" class="form-control mb-3" required>
-                    <input type="password" id="newPassword" placeholder="Новый пароль" class="form-control mb-3" required>
-                    <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
-                </form>
-                <p>Уже есть аккаунт? <a href="#" onclick="toggleForm()">Войти</a></p>
-                <p id="register-message" class="error-message"></p>
-            </div>
+            
         </div>
     </div>
     <div id="dashboard" class="dashboard" style="display: none;">
@@ -98,6 +89,12 @@
                     <button class="dashboard-button" onclick="loadSection('routes')">
                         <span class="button-text">Управление Маршрутами</span>
                         <span class="button-icon" style="background-image: url('routes-icon.png');"></span>
+                    </button>
+                </li>
+                <li class="mb-3">
+                    <button class="dashboard-button" onclick="loadSection('users')">
+                        <span class="button-text">Управление Пользователями</span>
+                        <span class="button-icon" style="background-image: url('users-icon.png');"></span>
                     </button>
                 </li>
                 <li class="mb-3 mt-5">
