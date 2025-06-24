@@ -13,10 +13,10 @@ const statusClassMap = {
     'в работе': 'primary',
     'на ремонте': 'warning',
     'свободен': 'success',
-    'в разработке': 'warning',
+    'в разработке': 'info',
     'завершен': 'success',
     'утвержден': 'primary',
-    'в пути': 'warning',
+    'в пути': 'primary',
     'доставлен': 'success',
     'отменен': 'danger'
 };
@@ -47,7 +47,136 @@ const ConfirmDeleteModal = ({ onConfirm, itemId }) => {
     return null;
 };
 
-// Компонент CargoTable
+// Компонент UsersTable (без изменений)
+const UsersTable = () => {
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [usersData, setUsersData] = React.useState([]);
+    const [itemToDelete, setItemToDelete] = React.useState(null);
+
+    const fetchData = async () => {
+        const response = await fetch(`/users?search=${encodeURIComponent(searchQuery)}`);
+        const data = await response.json();
+        setUsersData(data);
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, [searchQuery]);
+
+    const handleSearch = (e) => setSearchQuery(e.target.value);
+
+    const handleInputChange = (id, field, value) => {
+        setUsersData(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+    };
+
+    const updateUser = async (id) => {
+        const user = usersData.find(item => item.id === id);
+        const updateData = { username: user.username };
+        if (user.password) {
+            updateData.password = user.password;
+        }
+        await fetch(`/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+        fetchData();
+    };
+
+    const deleteUser = async (id) => {
+        await fetch(`/users/${id}`, { method: 'DELETE' });
+        fetchData();
+    };
+
+    const confirmDelete = (id) => {
+        setItemToDelete(id);
+        $('#confirmDeleteModal').modal('show');
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemToDelete) {
+            deleteUser(itemToDelete);
+            setItemToDelete(null);
+        }
+    };
+
+    const addUser = () => {
+        setUsersData(prev => [...prev, { id: 'new', username: '', password: '' }]);
+    };
+
+    const saveNewUser = async (user) => {
+        await fetch('/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(user)
+        });
+        fetchData();
+    };
+
+    const renderRow = (user) => {
+        if (user.id === 'new') {
+            return React.createElement('tr', null,
+                React.createElement('td', null, 'Авто'),
+                React.createElement('td', null, React.createElement('input', {
+                    className: 'form-control',
+                    value: user.username,
+                    onChange: (e) => handleInputChange('new', 'username', e.target.value)
+                })),
+                React.createElement('td', null, React.createElement('input', {
+                    type: 'password',
+                    className: 'form-control',
+                    value: user.password,
+                    onChange: (e) => handleInputChange('new', 'password', e.target.value)
+                })),
+                React.createElement('td', null,
+                    React.createElement('button', { className: 'btn btn-success btn-sm', onClick: () => saveNewUser(user) }, 'Сохранить'),
+                    React.createElement('button', { className: 'btn btn-secondary btn-sm', onClick: () => setUsersData(prev => prev.filter(item => item.id !== 'new')) }, 'Отмена')
+                )
+            );
+        }
+        return React.createElement('tr', null,
+            React.createElement('td', null, user.id),
+            React.createElement('td', null, React.createElement('input', {
+                className: 'form-control',
+                value: user.username,
+                onChange: (e) => handleInputChange(user.id, 'username', e.target.value)
+            })),
+            React.createElement('td', null, React.createElement('input', {
+                type: 'password',
+                className: 'form-control',
+                placeholder: 'Новый пароль (оставьте пустым, чтобы не менять)',
+                onChange: (e) => handleInputChange(user.id, 'password', e.target.value)
+            })),
+            React.createElement('td', null,
+                React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateUser(user.id) }, 'Обновить'),
+                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(user.id) }, 'Удалить')
+            )
+        );
+    };
+
+    return React.createElement('div', { className: 'table-container' },
+        React.createElement('h3', null, 'Управление Пользователями'),
+        React.createElement('input', {
+            type: 'text',
+            className: 'form-control mb-3',
+            placeholder: 'Поиск по пользователям',
+            value: searchQuery,
+            onChange: handleSearch
+        }),
+        React.createElement('table', { className: 'table table-striped' },
+            React.createElement('thead', null,
+                React.createElement('tr', null,
+                    ['ID', 'Логин', 'Пароль', 'Действия'].map(header => React.createElement('th', null, header))
+                )
+            ),
+            React.createElement('tbody', null, usersData.map(user => renderRow(user)))
+        ),
+        React.createElement('button', { className: 'btn btn-success', onClick: addUser }, 'Добавить Пользователя'),
+        React.createElement(ConfirmDeleteModal, { onConfirm: handleConfirmDelete, itemId: itemToDelete })
+    );
+};
+
+// Компонент CargoTable (без изменений)
 const CargoTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [cargoData, setCargoData] = React.useState([]);
@@ -123,7 +252,7 @@ const CargoTable = () => {
                     onChange: (e) => handleInputChange('new', 'name', e.target.value)
                 })),
                 React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
+                    className: `form-control badge badge-${typeClassMap[cargo.type] || 'secondary'}`,
                     value: cargo.type,
                     onChange: (e) => handleInputChange('new', 'type', e.target.value)
                 }, ['обычный', 'опасный', 'скоропортящийся'].map(opt => React.createElement('option', { value: opt }, opt)))),
@@ -161,9 +290,11 @@ const CargoTable = () => {
                 value: cargo.name,
                 onChange: (e) => handleInputChange(cargo.id, 'name', e.target.value)
             })),
-            React.createElement('td', null,
-                React.createElement('span', { className: `badge badge-${typeClassMap[cargo.type] || 'secondary'}` }, cargo.type)
-            ),
+            React.createElement('td', null, React.createElement('select', {
+                className: `form-control badge badge-${typeClassMap[cargo.type] || 'secondary'}`,
+                value: cargo.type,
+                onChange: (e) => handleInputChange(cargo.id, 'type', e.target.value)
+            }, ['обычный', 'опасный', 'скоропортящийся'].map(opt => React.createElement('option', { value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
                 value: cargo.sender,
@@ -297,7 +428,7 @@ const StaffTable = () => {
                     onChange: (e) => handleInputChange('new', 'hireDate', e.target.value)
                 })),
                 React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
+                    className: `form-control badge badge-${statusClassMap[staff.status] || 'info'}`,
                     value: staff.status,
                     onChange: (e) => handleInputChange('new', 'status', e.target.value)
                 }, ['активный', 'в отпуске', 'уволен'].map(opt => React.createElement('option', { value: opt }, opt)))),
@@ -331,9 +462,11 @@ const StaffTable = () => {
                 value: staff.hireDate,
                 onChange: (e) => handleInputChange(staff.id, 'hireDate', e.target.value)
             })),
-            React.createElement('td', null,
-                React.createElement('span', { className: `badge badge-${statusClassMap[staff.status] || 'info'}` }, staff.status)
-            ),
+            React.createElement('td', null, React.createElement('select', {
+                className: `form-control badge badge-${statusClassMap[staff.status] || 'info'}`,
+                value: staff.status,
+                onChange: (e) => handleInputChange(staff.id, 'status', e.target.value)
+            }, ['активный', 'в отпуске', 'уволен'].map(opt => React.createElement('option', { value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 type: 'number',
                 className: 'form-control',
@@ -455,7 +588,7 @@ const TransportTable = () => {
                     onChange: (e) => handleInputChange('new', 'licensePlate', e.target.value)
                 })),
                 React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
+                    className: `form-control badge badge-${statusClassMap[transport.status] || 'info'}`,
                     value: transport.status,
                     onChange: (e) => handleInputChange('new', 'status', e.target.value)
                 }, ['в работе', 'на ремонте', 'свободен'].map(opt => React.createElement('option', { value: opt }, opt)))),
@@ -493,9 +626,11 @@ const TransportTable = () => {
                 value: transport.licensePlate,
                 onChange: (e) => handleInputChange(transport.id, 'licensePlate', e.target.value)
             })),
-            React.createElement('td', null,
-                React.createElement('span', { className: `badge badge-${statusClassMap[transport.status] || 'info'}` }, transport.status)
-            ),
+            React.createElement('td', null, React.createElement('select', {
+                className: `form-control badge badge-${statusClassMap[transport.status] || 'info'}`,
+                value: transport.status,
+                onChange: (e) => handleInputChange(transport.id, 'status', e.target.value)
+            }, ['в работе', 'на ремонте', 'свободен'].map(opt => React.createElement('option', { value: opt }, opt)))),
             React.createElement('td', null, React.createElement('select', {
                 className: 'form-control',
                 value: transport.driver || '',
@@ -653,7 +788,7 @@ const ReportsTable = () => {
                     onChange: (e) => handleInputChange('new', 'author', e.target.value || null)
                 }, [React.createElement('option', { value: '' }, 'Без автора'), ...managers.map(manager => React.createElement('option', { value: manager.fullName }, manager.fullName))])),
                 React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
+                    className: `form-control badge badge-${statusClassMap[report.status] || 'info'}`,
                     value: report.status,
                     onChange: (e) => handleInputChange('new', 'status', e.target.value)
                 }, ['в разработке', 'завершен', 'утвержден'].map(opt => React.createElement('option', { value: opt }, opt)))),
@@ -686,9 +821,11 @@ const ReportsTable = () => {
                 value: report.author || '',
                 onChange: (e) => handleInputChange(report.id, 'author', e.target.value || null)
             }, [React.createElement('option', { value: '' }, 'Без автора'), ...managers.map(manager => React.createElement('option', { value: manager.fullName }, manager.fullName))])),
-            React.createElement('td', null,
-                React.createElement('span', { className: `badge badge-${statusClassMap[report.status] || 'info'}` }, report.status)
-            ),
+            React.createElement('td', null, React.createElement('select', {
+                className: `form-control badge badge-${statusClassMap[report.status] || 'info'}`,
+                value: report.status,
+                onChange: (e) => handleInputChange(report.id, 'status', e.target.value)
+            }, ['в разработке', 'завершен', 'утвержден'].map(opt => React.createElement('option', { value: opt }, opt)))),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateReport(report.id) }, 'Обновить'),
                 React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(report.id) }, 'Удалить')
@@ -819,7 +956,7 @@ const RoutesTable = () => {
                     onChange: (e) => handleInputChange('new', 'actualTime', e.target.value || null)
                 })),
                 React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
+                    className: `form-control badge badge-${statusClassMap[route.status] || 'info'}`,
                     value: route.status,
                     onChange: (e) => handleInputChange('new', 'status', e.target.value)
                 }, ['в пути', 'доставлен', 'отменен'].map(opt => React.createElement('option', { value: opt }, opt)))),
@@ -864,9 +1001,11 @@ const RoutesTable = () => {
                 value: route.actualTime || '',
                 onChange: (e) => handleInputChange(route.id, 'actualTime', e.target.value || null)
             })),
-            React.createElement('td', null,
-                React.createElement('span', { className: `badge badge-${statusClassMap[route.status] || 'info'}` }, route.status)
-            ),
+            React.createElement('td', null, React.createElement('select', {
+                className: `form-control badge badge-${statusClassMap[route.status] || 'info'}`,
+                value: route.status,
+                onChange: (e) => handleInputChange(route.id, 'status', e.target.value)
+            }, ['в пути', 'доставлен', 'отменен'].map(opt => React.createElement('option', { value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 type: 'number',
                 className: 'form-control',
@@ -892,7 +1031,7 @@ const RoutesTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'Транспорт', 'Начало', 'Конец', 'Предп. Время', 'Факт. Время', 'Статус', 'Доход', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'Транспорт', 'Начало', 'Конец', 'Предп. Время', 'Факт. Время', 'Статус', 'Доход (в белорусских рублях)', 'Действия'].map(header => React.createElement('th', null, header))
                 )
             ),
             React.createElement('tbody', null, routesData.map(route => renderRow(route)))
@@ -903,24 +1042,6 @@ const RoutesTable = () => {
 };
 
 // Функции управления формами и аутентификацией (без изменений)
-function toggleForm() {
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const dashboard = document.getElementById('dashboard');
-
-    if (loginForm.style.display === 'none' && registerForm.style.display === 'none') {
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
-        dashboard.style.display = 'none';
-    } else if (loginForm.style.display === 'block') {
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
-    } else {
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
-    }
-}
-
 document.getElementById('loginForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     const username = document.getElementById('username').value;
@@ -932,24 +1053,21 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     });
     const data = await response.json();
     if (data.message === 'Вход выполнен успешно!') {
-        // Плавное скрытие фона и форм
         document.getElementById('mainContainer').style.opacity = '0';
         document.getElementById('authContainer').style.opacity = '0';
         setTimeout(() => {
             document.getElementById('mainContainer').style.display = 'none';
             document.getElementById('authContainer').style.display = 'none';
             const dashboard = document.getElementById('dashboard');
-            // Сбрасываем стили dashboard перед отображением
             dashboard.style.display = 'block';
             dashboard.style.opacity = '0';
             dashboard.classList.remove('visible');
-            // Устанавливаем фон в зависимости от текущей темы
             document.body.style.background = document.body.classList.contains('dark-theme') ? '#333' : '#f4f4f9';
             setTimeout(() => {
                 dashboard.style.opacity = '1';
                 dashboard.classList.add('visible');
-            }, 100); // Небольшая задержка для начала анимации
-        }, 500); // Время анимации скрытия
+            }, 100);
+        }, 500);
         document.getElementById('currentUser').textContent = username;
         document.getElementById('error-message').textContent = '';
     } else {
@@ -957,57 +1075,36 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     }
 });
 
-document.getElementById('registerForm').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const username = document.getElementById('newUsername').value;
-    const password = document.getElementById('newPassword').value;
-    const response = await fetch('/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    });
-    const data = await response.json();
-    document.getElementById('register-message').textContent = data.message;
-    if (data.message === 'Регистрация успешна!') toggleForm();
-});
-
 function logout() {
     const dashboard = document.getElementById('dashboard');
     const mainContainer = document.getElementById('mainContainer');
     const authContainer = document.getElementById('authContainer');
     const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
 
-    // Плавное скрытие дашборда
     dashboard.style.opacity = '0';
     setTimeout(() => {
         dashboard.style.display = 'none';
         dashboard.classList.remove('visible');
-        // Очищаем содержимое dashboard для предотвращения конфликтов
         document.getElementById('contentArea').innerHTML = '';
-        ReactDOM.unmountComponentAtNode(document.getElementById('modalContentArea')); // Очищаем React-компоненты
+        ReactDOM.unmountComponentAtNode(document.getElementById('modalContentArea'));
 
-        // Показываем mainContainer и authContainer
         mainContainer.style.display = 'flex';
         authContainer.style.display = 'flex';
         mainContainer.style.opacity = '0';
         authContainer.style.opacity = '0';
 
-        // Плавное появление стартовой страницы
         setTimeout(() => {
             mainContainer.style.opacity = '1';
             authContainer.style.opacity = '1';
             loginForm.style.display = 'block';
-            registerForm.style.display = 'none';
         }, 100);
 
-        // Очистка полей и контента
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
         document.getElementById('error-message').textContent = '';
-        document.getElementById('register-message').textContent = '';
     }, 500);
 }
+
 function loadSection(section) {
     const modalContentArea = document.getElementById('modalContentArea');
     let tableComponent;
@@ -1022,6 +1119,8 @@ function loadSection(section) {
         tableComponent = React.createElement(ReportsTable);
     } else if (section === 'routes') {
         tableComponent = React.createElement(RoutesTable);
+    } else if (section === 'users') {
+        tableComponent = React.createElement(UsersTable);
     }
 
     ReactDOM.render(tableComponent, modalContentArea);
@@ -1032,7 +1131,6 @@ function toggleTheme() {
     document.body.classList.toggle('dark-theme');
     const isDarkTheme = document.body.classList.contains('dark-theme');
     localStorage.setItem('theme', isDarkTheme ? 'dark' : 'light');
-    // Обновляем фон body в зависимости от темы
     document.body.style.background = isDarkTheme ? '#333' : '#f4f4f9';
 }
 
