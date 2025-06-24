@@ -114,7 +114,6 @@ body {
 }
 
 .logo {
-
     margin-bottom: 50px;
 }
 
@@ -410,43 +409,96 @@ a {
     pointer-events: none;
 }
 
-.form-control.badge-secondary {
-    background-color: #6c757d;
-    color: white;
-}
-
-.form-control.badge-danger {
-    background-color: #dc3545;
-    color: white;
-}
-
-.form-control.badge-warning {
-    background-color: #ffc107;
-    color: black;
+.form-control.badge {
+    display: inline-block;
+    padding: 0.25em 0.4em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    background-color: #6c757d; /* Цвет по умолчанию */
+    color: #fff;
+    border: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M8%2011L13%206H3L8%2011Z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
 }
 
 .form-control.badge-success {
     background-color: #28a745;
-    color: white;
+    color: #fff;
+}
+
+.form-control.badge-warning {
+    background-color: #ffc107;
+    color: #212529; /* Черный текст для читаемости */
+}
+
+.form-control.badge-danger {
+    background-color: #dc3545;
+    color: #fff;
 }
 
 .form-control.badge-primary {
     background-color: #007bff;
-    color: white;
+    color: #fff;
 }
 
 .form-control.badge-info {
     background-color: #17a2b8;
-    color: white;
+    color: #fff;
 }
 
-.dark-theme .form-control.badge-secondary,
-.dark-theme .form-control.badge-danger,
-.dark-theme .form-control.badge-warning,
-.dark-theme .form-control.badge-success,
-.dark-theme .form-control.badge-primary,
+.form-control.badge-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.dark-theme .form-control.badge {
+    background-color: #6c757d; /* Цвет по умолчанию для темной темы */
+    color: #fff;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%1616%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M8%2011L13%206H3L8%2011Z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+.dark-theme .form-control.badge-success {
+    background-color: #2ecc71; /* Более яркий зеленый для темной темы */
+    color: #fff;
+}
+
+.dark-theme .form-control.badge-warning {
+    background-color: #f1c40f; /* Более темный желтый для читаемости */
+    color: #212529; /* Черный текст для читаемости */
+}
+
+.dark-theme .form-control.badge-danger {
+    background-color: #e74c3c; /* Более яркий красный для темной темы */
+    color: #fff;
+}
+
+.dark-theme .form-control.badge-primary {
+    background-color: #3498db; /* Более яркий синий для темной темы */
+    color: #fff;
+}
+
 .dark-theme .form-control.badge-info {
-    color: white;
+    background-color: #1abc9c; /* Более яркий бирюзовый для темной темы */
+    color: #fff;
+}
+
+.dark-theme .form-control.badge-secondary {
+    background-color: #7f8c8d; /* Более светлый серый для темной темы */
+    color: #fff;
 }
 
 .dark-theme select.form-control {
@@ -465,4 +517,3 @@ a {
 .modal-xl {
     max-width: 90% !important;
 }
-
