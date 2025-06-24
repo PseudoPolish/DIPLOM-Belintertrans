@@ -130,6 +130,62 @@ app.use((req, res, next) => {
 });
 
 // Пользователи
+
+// Пользователи (для управления)
+app.get('/users', (req, res) => {
+    const searchQuery = req.query.search || '';
+    const sql = 'SELECT id, username FROM users WHERE CAST(id AS TEXT) LIKE ? OR username LIKE ?';
+    const params = [`%${searchQuery}%`, `%${searchQuery}%`];
+    db.all(sql, params, (err, rows) => {
+        if (err) return res.status(500).json({ message: 'Ошибка при получении данных' });
+        res.json(rows);
+    });
+});
+
+app.post('/users', (req, res) => {
+    const { username, password } = req.body;
+    db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
+        if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+        if (row) return res.status(400).json({ message: 'Пользователь уже существует' });
+        getNextAvailableId('users', (err, nextId) => {
+            if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+            db.run('INSERT INTO users (id, username, password) VALUES (?, ?, ?)', [nextId, username, password], (err) => {
+                if (err) return res.status(500).json({ message: 'Ошибка при добавлении пользователя' });
+                res.json({ message: 'Пользователь добавлен', user: { id: nextId, username } });
+            });
+        });
+    });
+});
+
+app.put('/users/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    const { username, password } = req.body;
+    db.get('SELECT * FROM users WHERE id = ?', [id], (err, row) => {
+        if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+        if (!row) return res.status(404).json({ message: 'Пользователь не найден' });
+        const updatedUsername = username || row.username;
+        const updatedPassword = password || row.password;
+        db.run('UPDATE users SET username = ?, password = ? WHERE id = ?', [updatedUsername, updatedPassword, id], function (err) {
+            if (err) return res.status(500).json({ message: 'Ошибка при обновлении' });
+            res.json({ message: 'Пользователь обновлен', user: { id, username: updatedUsername } });
+        });
+    });
+});
+
+app.delete('/users/:id', (req, res) => {
+    const id = parseInt(req.params.id);
+    db.get('SELECT * FROM users WHERE id = ?', [id], (err, row) => {
+        if (err) return res.status(500).json({ message: 'Ошибка сервера' });
+        if (!row) return res.status(404).json({ message: 'Пользователь не найден' });
+        db.run('DELETE FROM users WHERE id = ?', [id], (err) => {
+            if (err) return res.status(500).json({ message: 'Ошибка при удалении' });
+            updateIdsAfterDelete('users', id, (err) => {
+                if (err) console.error('Ошибка при обновлении ID в users:', err);
+                res.json({ message: 'Пользователь удален', user: row });
+            });
+        });
+    });
+});
 app.post('/register', (req, res) => {
     const { username, password } = req.body;
     db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
