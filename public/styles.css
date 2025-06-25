@@ -498,7 +498,7 @@ a {
 
 .dark-theme .form-control.badge-secondary {
     background-color: #7f8c8d; /* Более светлый серый для темной темы */
-    color: #fff;
+    color: #f;
 }
 
 .dark-theme select.form-control {
@@ -514,6 +514,62 @@ a {
     padding-right: 30px;
 }
 
+/* Стили для кнопки "Управление отчётами" (оранжевый) */
+.dashboard-button[onclick="loadSection('reports')"] {
+    background-color: #f28c38; /* Оранжевый */
+    border-color: #f28c38;
+}
+
+    .dashboard-button[onclick="loadSection('reports')"]:hover {
+        background-color: #d9752a; /* Более тёмный оранжевый при наведении */
+        border-color: #d9752a;
+    }
+
+/* Стили для кнопки "Управление пользователями" (красный) */
+.dashboard-button[onclick="loadSection('users')"] {
+    background-color: #dc3545; /* Красный */
+    border-color: #dc3545;
+}
+
+    .dashboard-button[onclick="loadSection('users')"]:hover {
+        background-color: #c82333; /* Более тёмный красный при наведении */
+        border-color: #c82333;
+    }
+
+/* Стили для тёмной темы */
+.dark-theme .dashboard-button[onclick="loadSection('reports')"] {
+    background-color: #e67e22; /* Чуть ярче оранжевый для тёмной темы */
+    border-color: #e67e22;
+}
+
+    .dark-theme .dashboard-button[onclick="loadSection('reports')"]:hover {
+        background-color: #d35400; /* Более тёмный оранжевый при наведении */
+        border-color: #d35400;
+    }
+
+.dark-theme .dashboard-button[onclick="loadSection('users')"] {
+    background-color: #e74c3c; /* Чуть ярче красный для тёмной темы */
+    border-color: #e74c3c;
+}
+
+    .dark-theme .dashboard-button[onclick="loadSection('users')"]:hover {
+        background-color: #c0392b; /* Более тёмный красный при наведении */
+        border-color: #c0392b;
+    }
+
+/* Стили для логотипа над дашбордом */
+.dashboard-logo {
+    display: block;
+    margin: 0 auto 20px auto; /* Центрирование и отступ снизу */
+    width: 300px; /* Размер логотипа */
+    height: auto;
+    transition: opacity 0.5s ease; /* Плавное появление вместе с дашбордом */
+}
+
+/* Стили для тёмной темы */
+.dark-theme .dashboard-logo {
+    filter: brightness(1.2); /* Увеличиваем яркость логотипа в тёмной теме для лучшей видимости */
+}
 .modal-xl {
     max-width: 90% !important;
 }
