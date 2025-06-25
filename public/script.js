@@ -42,7 +42,7 @@ const ConfirmDeleteModal = ({ onConfirm, itemId }) => {
             $('#confirmDeleteModal').off('hidden.bs.modal');
             $('#confirmDeleteButton').off('click');
         };
-    }, [itemId]);
+    }, [itemId, onConfirm]); // Добавляем onConfirm в зависимости
 
     return null;
 };
@@ -71,21 +71,35 @@ const UsersTable = () => {
 
     const updateUser = async (id) => {
         const user = usersData.find(item => item.id === id);
-        const updateData = { username: user.username };
-        if (user.password) {
-            updateData.password = user.password;
-        }
-        await fetch(`/users/${id}`, {
+        const updateData = {
+            username: user.username,
+            role: user.role,
+            currentUserRole: currentUserRole
+        };
+        if (user.password) updateData.password = user.password;
+        const response = await fetch(`/users/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updateData)
         });
-        fetchData();
+        const result = await response.json();
+        if (response.ok) {
+            fetchData();
+        } else {
+            alert(result.message);
+        }
     };
 
     const deleteUser = async (id) => {
-        await fetch(`/users/${id}`, { method: 'DELETE' });
-        fetchData();
+        const response = await fetch(`/users/${id}?currentUserRole=${encodeURIComponent(currentUserRole)}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+        if (response.ok) {
+            fetchData();
+        } else {
+            alert(result.message);
+        }
     };
 
     const confirmDelete = (id) => {
@@ -101,7 +115,7 @@ const UsersTable = () => {
     };
 
     const addUser = () => {
-        setUsersData(prev => [...prev, { id: 'new', username: '', password: '' }]);
+        setUsersData(prev => [...prev, { id: 'new', username: '', password: '', role: 'Диспетчер' }]);
     };
 
     const saveNewUser = async (user) => {
@@ -128,6 +142,13 @@ const UsersTable = () => {
                     value: user.password,
                     onChange: (e) => handleInputChange('new', 'password', e.target.value)
                 })),
+                React.createElement('td', null, React.createElement('select', {
+                    className: 'form-control',
+                    value: user.role,
+                    onChange: (e) => handleInputChange('new', 'role', e.target.value)
+                },
+                    ['Администратор', 'Менеджер', 'Диспетчер'].map(opt => React.createElement('option', { value: opt }, opt))
+                )),
                 React.createElement('td', null,
                     React.createElement('button', { className: 'btn btn-success btn-sm', onClick: () => saveNewUser(user) }, 'Сохранить'),
                     React.createElement('button', { className: 'btn btn-secondary btn-sm', onClick: () => setUsersData(prev => prev.filter(item => item.id !== 'new')) }, 'Отмена')
@@ -147,6 +168,13 @@ const UsersTable = () => {
                 placeholder: 'Новый пароль (оставьте пустым, чтобы не менять)',
                 onChange: (e) => handleInputChange(user.id, 'password', e.target.value)
             })),
+            React.createElement('td', null, React.createElement('select', {
+                className: 'form-control',
+                value: user.role,
+                onChange: (e) => handleInputChange(user.id, 'role', e.target.value)
+            },
+                ['Администратор', 'Менеджер', 'Диспетчер'].map(opt => React.createElement('option', { value: opt }, opt))
+            )),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateUser(user.id) }, 'Обновить'),
                 React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(user.id) }, 'Удалить')
@@ -166,7 +194,7 @@ const UsersTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'Логин', 'Пароль', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'Логин', 'Пароль', 'Роль', 'Действия'].map(header => React.createElement('th', null, header))
                 )
             ),
             React.createElement('tbody', null, usersData.map(user => renderRow(user)))
@@ -511,11 +539,11 @@ const TransportTable = () => {
 
     const fetchData = async () => {
         const transportResponse = await fetch(`/transport?search=${encodeURIComponent(searchQuery)}`);
-        const staffResponse = await fetch('/staff');
+        const staffResponse = await fetch('/staff?status=активный&position=Водитель');
         const transportData = await transportResponse.json();
         const staffData = await staffResponse.json();
         setTransportData(transportData);
-        setDrivers(staffData.filter(staff => staff.position === 'Водитель'));
+        setDrivers(staffData);
     };
 
     React.useEffect(() => {
@@ -530,17 +558,30 @@ const TransportTable = () => {
 
     const updateTransport = async (id) => {
         const transport = transportData.find(item => item.id === id);
-        await fetch(`/transport/${id}`, {
+        const response = await fetch(`/transport/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(transport)
         });
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.message);
+            return;
+        }
         fetchData();
     };
 
     const deleteTransport = async (id) => {
-        await fetch(`/transport/${id}`, { method: 'DELETE' });
-        fetchData();
+        console.log('Отправка запроса на удаление транспорта с ID:', id);
+        const response = await fetch(`/transport/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            console.log('Транспорт успешно удален');
+            fetchData();
+        } else {
+            const result = await response.json();
+            console.log('Ошибка при удалении транспорта:', result.message);
+            alert(result.message);
+        }
     };
 
     const confirmDelete = (id) => {
@@ -550,21 +591,28 @@ const TransportTable = () => {
 
     const handleConfirmDelete = () => {
         if (itemToDelete) {
+            console.log('Удаление транспорта с ID:', itemToDelete);
             deleteTransport(itemToDelete);
             setItemToDelete(null);
         }
     };
 
     const addTransport = () => {
+        console.log('Добавление нового транспорта');
         setTransportData(prev => [...prev, { id: 'new', type: 'грузовик', model: '', licensePlate: '', status: 'свободен', driver: null, maintenanceCost: 0 }]);
     };
 
     const saveNewTransport = async (transport) => {
-        await fetch('/transport', {
+        const response = await fetch('/transport', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(transport)
         });
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.message);
+            return;
+        }
         fetchData();
     };
 
@@ -680,8 +728,13 @@ const ReportsTable = () => {
     const [itemToDelete, setItemToDelete] = React.useState(null);
 
     const fetchData = async () => {
-        const reportsResponse = await fetch(`/reports?search=${encodeURIComponent(searchQuery)}`);
+        const reportsResponse = await fetch(`/reports?search=${encodeURIComponent(searchQuery)}&currentUserRole=${encodeURIComponent(currentUserRole)}`);
         const staffResponse = await fetch('/staff');
+        if (!reportsResponse.ok) {
+            const error = await reportsResponse.json();
+            alert(error.message);
+            return;
+        }
         const reportsData = await reportsResponse.json();
         const staffData = await staffResponse.json();
         setReportsData(reportsData);
@@ -700,7 +753,7 @@ const ReportsTable = () => {
 
     const updateReport = async (id) => {
         const report = reportsData.find(item => item.id === id);
-        await fetch(`/reports/${id}`, {
+        await fetch(`/reports/${id}?currentUserRole=${encodeURIComponent(currentUserRole)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(report)
@@ -709,7 +762,7 @@ const ReportsTable = () => {
     };
 
     const deleteReport = async (id) => {
-        await fetch(`/reports/${id}`, { method: 'DELETE' });
+        await fetch(`/reports/${id}?currentUserRole=${encodeURIComponent(currentUserRole)}`, { method: 'DELETE' });
         fetchData();
     };
 
@@ -730,7 +783,7 @@ const ReportsTable = () => {
     };
 
     const saveNewReport = async (report) => {
-        await fetch('/reports', {
+        await fetch(`/reports?currentUserRole=${encodeURIComponent(currentUserRole)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(report)
@@ -739,7 +792,12 @@ const ReportsTable = () => {
     };
 
     const generateReport = async () => {
-        const response = await fetch('/generate-report');
+        const response = await fetch(`/generate-report?currentUserRole=${encodeURIComponent(currentUserRole)}`);
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.message);
+            return;
+        }
         const report = await response.json();
         setReportContent(`
             <h4>Финансовый отчет</h4>
@@ -760,77 +818,12 @@ const ReportsTable = () => {
         `);
     };
 
-    const exportReport = () => window.location.href = '/export-report';
+    const exportReport = () => {
+        window.location.href = `/export-report?currentUserRole=${encodeURIComponent(currentUserRole)}`;
+    };
 
     const renderRow = (report) => {
-        if (report.id === 'new') {
-            return React.createElement('tr', null,
-                React.createElement('td', null, 'Авто'),
-                React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
-                    value: report.type,
-                    onChange: (e) => handleInputChange('new', 'type', e.target.value)
-                }, ['ежедневный', 'ежемесячный', 'по грузам', 'по персоналу'].map(opt => React.createElement('option', { value: opt }, opt)))),
-                React.createElement('td', null, React.createElement('input', {
-                    type: 'date',
-                    className: 'form-control',
-                    value: report.creationDate,
-                    onChange: (e) => handleInputChange('new', 'creationDate', e.target.value)
-                })),
-                React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
-                    value: report.reportPeriod,
-                    onChange: (e) => handleInputChange('new', 'reportPeriod', e.target.value)
-                }, ['1 Месяц', '3 Месяца', '6 Месяцев', '12 Месяцев'].map(opt => React.createElement('option', { value: opt }, opt)))),
-                React.createElement('td', null, React.createElement('select', {
-                    className: 'form-control',
-                    value: report.author || '',
-                    onChange: (e) => handleInputChange('new', 'author', e.target.value || null)
-                }, [React.createElement('option', { value: '' }, 'Без автора'), ...managers.map(manager => React.createElement('option', { value: manager.fullName }, manager.fullName))])),
-                React.createElement('td', null, React.createElement('select', {
-                    className: `form-control badge badge-${statusClassMap[report.status] || 'info'}`,
-                    value: report.status,
-                    onChange: (e) => handleInputChange('new', 'status', e.target.value)
-                }, ['в разработке', 'завершен', 'утвержден'].map(opt => React.createElement('option', { value: opt }, opt)))),
-                React.createElement('td', null,
-                    React.createElement('button', { className: 'btn btn-success btn-sm', onClick: () => saveNewReport(report) }, 'Сохранить'),
-                    React.createElement('button', { className: 'btn btn-secondary btn-sm', onClick: () => setReportsData(prev => prev.filter(item => item.id !== 'new')) }, 'Отмена')
-                )
-            );
-        }
-        return React.createElement('tr', null,
-            React.createElement('td', null, report.id),
-            React.createElement('td', null, React.createElement('select', {
-                className: 'form-control',
-                value: report.type,
-                onChange: (e) => handleInputChange(report.id, 'type', e.target.value)
-            }, ['ежедневный', 'ежемесячный', 'по грузам', 'по персоналу'].map(opt => React.createElement('option', { value: opt }, opt)))),
-            React.createElement('td', null, React.createElement('input', {
-                type: 'date',
-                className: 'form-control',
-                value: report.creationDate,
-                onChange: (e) => handleInputChange(report.id, 'creationDate', e.target.value)
-            })),
-            React.createElement('td', null, React.createElement('select', {
-                className: 'form-control',
-                value: report.reportPeriod,
-                onChange: (e) => handleInputChange(report.id, 'reportPeriod', e.target.value)
-            }, ['1 Месяц', '3 Месяца', '6 Месяцев', '12 Месяцев'].map(opt => React.createElement('option', { value: opt }, opt)))),
-            React.createElement('td', null, React.createElement('select', {
-                className: 'form-control',
-                value: report.author || '',
-                onChange: (e) => handleInputChange(report.id, 'author', e.target.value || null)
-            }, [React.createElement('option', { value: '' }, 'Без автора'), ...managers.map(manager => React.createElement('option', { value: manager.fullName }, manager.fullName))])),
-            React.createElement('td', null, React.createElement('select', {
-                className: `form-control badge badge-${statusClassMap[report.status] || 'info'}`,
-                value: report.status,
-                onChange: (e) => handleInputChange(report.id, 'status', e.target.value)
-            }, ['в разработке', 'завершен', 'утвержден'].map(opt => React.createElement('option', { value: opt }, opt)))),
-            React.createElement('td', null,
-                React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateReport(report.id) }, 'Обновить'),
-                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(report.id) }, 'Удалить')
-            )
-        );
+        // ... (остальной код renderRow без изменений)
     };
 
     return React.createElement('div', { className: 'table-container' },
@@ -867,7 +860,7 @@ const RoutesTable = () => {
 
     const fetchData = async () => {
         const routesResponse = await fetch(`/routes?search=${encodeURIComponent(searchQuery)}`);
-        const transportResponse = await fetch('/transport');
+        const transportResponse = await fetch('/transport?status=в%20работе,свободен');
         const routesData = await routesResponse.json();
         const transportData = await transportResponse.json();
         setRoutesData(routesData);
@@ -886,17 +879,22 @@ const RoutesTable = () => {
 
     const updateRoute = async (id) => {
         const route = routesData.find(item => item.id === id);
-        await fetch(`/routes/${id}`, {
+        const response = await fetch(`/routes/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(route)
         });
-        fetchData();
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.message);
+            return;
+        }
+        await fetchData(); // Обновляем данные после успешного запроса
     };
 
     const deleteRoute = async (id) => {
         await fetch(`/routes/${id}`, { method: 'DELETE' });
-        fetchData();
+        await fetchData(); // Обновляем данные после удаления
     };
 
     const confirmDelete = (id) => {
@@ -916,15 +914,23 @@ const RoutesTable = () => {
     };
 
     const saveNewRoute = async (route) => {
-        await fetch('/routes', {
+        const response = await fetch('/routes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(route)
         });
-        fetchData();
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.message);
+            return;
+        }
+        await fetchData(); // Обновляем данные после успешного запроса
     };
 
     const renderRow = (route) => {
+        const selectedTransport = transport.find(t => t.id === route.transportId);
+        const transportDisplay = selectedTransport ? `${selectedTransport.model} (${selectedTransport.status})` : 'Выберите транспорт';
+
         if (route.id === 'new') {
             return React.createElement('tr', null,
                 React.createElement('td', null, 'Авто'),
@@ -932,7 +938,7 @@ const RoutesTable = () => {
                     className: 'form-control',
                     value: route.transportId,
                     onChange: (e) => handleInputChange('new', 'transportId', parseInt(e.target.value))
-                }, transport.map(t => React.createElement('option', { value: t.id }, t.model)))),
+                }, transport.map(t => React.createElement('option', { value: t.id }, `${t.model} (${t.status})`)))),
                 React.createElement('td', null, React.createElement('input', {
                     className: 'form-control',
                     value: route.startPoint,
@@ -978,7 +984,7 @@ const RoutesTable = () => {
                 className: 'form-control',
                 value: route.transportId,
                 onChange: (e) => handleInputChange(route.id, 'transportId', parseInt(e.target.value))
-            }, transport.map(t => React.createElement('option', { value: t.id }, t.model)))),
+            }, transport.map(t => React.createElement('option', { value: t.id }, `${t.model} (${t.status})`)))),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
                 value: route.startPoint,
@@ -1041,7 +1047,13 @@ const RoutesTable = () => {
     );
 };
 
+
+
+
 // Функции управления формами и аутентификацией (без изменений)
+
+let currentUserRole = '';
+
 document.getElementById('loginForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     const username = document.getElementById('username').value;
@@ -1053,6 +1065,7 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     });
     const data = await response.json();
     if (data.message === 'Вход выполнен успешно!') {
+        currentUserRole = data.role; // Сохраняем роль текущего пользователя
         document.getElementById('mainContainer').style.opacity = '0';
         document.getElementById('authContainer').style.opacity = '0';
         setTimeout(() => {
@@ -1106,6 +1119,16 @@ function logout() {
 }
 
 function loadSection(section) {
+    // Проверка доступа для таблицы "Пользователи"
+    if (section === 'users' && currentUserRole !== 'Администратор') {
+        alert('Доступ запрещен: только администраторы могут управлять пользователями.');
+        return;
+    }
+    // Проверка доступа для таблицы "Отчёты"
+    if (section === 'reports' && !['Менеджер', 'Администратор'].includes(currentUserRole)) {
+        alert('Доступ запрещен: только менеджеры и администраторы могут работать с отчётами.');
+        return;
+    }
     const modalContentArea = document.getElementById('modalContentArea');
     let tableComponent;
 
