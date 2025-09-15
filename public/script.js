@@ -1,11 +1,18 @@
 // ФАЙЛ SCRIPT.JS:
-// Маппинг классов для цветных индикаторов статусов и типов
+/**
+ * A map of cargo types to their corresponding CSS classes for styling.
+ * @type {Object.<string, string>}
+ */
 const typeClassMap = {
     'обычный': 'secondary',
     'опасный': 'danger',
     'скоропортящийся': 'warning'
 };
 
+/**
+ * A map of various statuses to their corresponding CSS classes for styling.
+ * @type {Object.<string, string>}
+ */
 const statusClassMap = {
     'активный': 'success',
     'в отпуске': 'warning',
@@ -21,8 +28,18 @@ const statusClassMap = {
     'отменен': 'danger'
 };
 
-// Компонент ConfirmDeleteModal
+/**
+ * A React component that displays a confirmation modal for deleting an item.
+ * This component does not render any visible elements itself but manages the behavior of a Bootstrap modal.
+ * @param {object} props - The component props.
+ * @param {function(number): void} props.onConfirm - The function to call when the delete operation is confirmed. It receives the item ID.
+ * @param {number | null} props.itemId - The ID of the item to be deleted. The modal is shown when this is not null.
+ * @returns {null} This component does not render anything.
+ */
 const ConfirmDeleteModal = ({ onConfirm, itemId }) => {
+    /**
+     * Handles the click on the confirm button in the modal.
+     */
     const handleConfirm = () => {
         onConfirm(itemId);
         $('#confirmDeleteModal').modal('hide');
@@ -42,12 +59,19 @@ const ConfirmDeleteModal = ({ onConfirm, itemId }) => {
             $('#confirmDeleteModal').off('hidden.bs.modal');
             $('#confirmDeleteButton').off('click');
         };
-    }, [itemId, onConfirm]); // Добавляем onConfirm в зависимости
+    }, [itemId, onConfirm]);
 
     return null;
 };
 
-// Компонент UsersTable (без изменений)
+/**
+ * A React component for managing users in a table.
+ * It allows searching, adding, updating, and deleting users.
+ * @state {string} searchQuery - The current text in the search input.
+ * @state {Array<object>} usersData - An array of user objects to display.
+ * @state {number | null} itemToDelete - The ID of the user marked for deletion.
+ * @returns {React.ReactElement} The UsersTable component.
+ */
 const UsersTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [usersData, setUsersData] = React.useState([]);
@@ -107,6 +131,10 @@ const UsersTable = () => {
         $('#confirmDeleteModal').modal('show');
     };
 
+    /**
+     * Handles the confirmation of a delete operation from the modal.
+     * It calls the deleteUser function with the stored item ID.
+     */
     const handleConfirmDelete = () => {
         if (itemToDelete) {
             deleteUser(itemToDelete);
@@ -127,9 +155,14 @@ const UsersTable = () => {
         fetchData();
     };
 
+    /**
+     * Renders a single row in the users table.
+     * @param {object} user - The user object to render.
+     * @returns {React.ReactElement} A table row element.
+     */
     const renderRow = (user) => {
         if (user.id === 'new') {
-            return React.createElement('tr', null,
+            return React.createElement('tr', { key: 'new' },
                 React.createElement('td', null, 'Авто'),
                 React.createElement('td', null, React.createElement('input', {
                     className: 'form-control',
@@ -147,7 +180,7 @@ const UsersTable = () => {
                     value: user.role,
                     onChange: (e) => handleInputChange('new', 'role', e.target.value)
                 },
-                    ['Администратор', 'Менеджер', 'Диспетчер'].map(opt => React.createElement('option', { value: opt }, opt))
+                    ['Администратор', 'Менеджер', 'Диспетчер'].map(opt => React.createElement('option', { key: opt, value: opt }, opt))
                 )),
                 React.createElement('td', null,
                     React.createElement('button', { className: 'btn btn-success btn-sm', onClick: () => saveNewUser(user) }, 'Сохранить'),
@@ -155,7 +188,7 @@ const UsersTable = () => {
                 )
             );
         }
-        return React.createElement('tr', null,
+        return React.createElement('tr', { key: user.id },
             React.createElement('td', null, user.id),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
@@ -173,7 +206,7 @@ const UsersTable = () => {
                 value: user.role,
                 onChange: (e) => handleInputChange(user.id, 'role', e.target.value)
             },
-                ['Администратор', 'Менеджер', 'Диспетчер'].map(opt => React.createElement('option', { value: opt }, opt))
+                ['Администратор', 'Менеджер', 'Диспетчер'].map(opt => React.createElement('option', { key: opt, value: opt }, opt))
             )),
             React.createElement('td', null,
                 React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateUser(user.id) }, 'Обновить'),
@@ -194,7 +227,7 @@ const UsersTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'Логин', 'Пароль', 'Роль', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'Логин', 'Пароль', 'Роль', 'Действия'].map(header => React.createElement('th', { key: header }, header))
                 )
             ),
             React.createElement('tbody', null, usersData.map(user => renderRow(user)))
@@ -204,7 +237,14 @@ const UsersTable = () => {
     );
 };
 
-// Компонент CargoTable (без изменений)
+/**
+ * A React component for managing cargo in a table.
+ * @state {string} searchQuery - The current text in the search input.
+ * @state {Array<object>} cargoData - An array of cargo objects to display.
+ * @state {Array<object>} routes - An array of available routes for selection.
+ * @state {number | null} itemToDelete - The ID of the cargo item marked for deletion.
+ * @returns {React.ReactElement} The CargoTable component.
+ */
 const CargoTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [cargoData, setCargoData] = React.useState([]);
@@ -250,6 +290,10 @@ const CargoTable = () => {
         $('#confirmDeleteModal').modal('show');
     };
 
+    /**
+     * Handles the confirmation of a delete operation from the modal.
+     * It calls the deleteCargo function with the stored item ID.
+     */
     const handleConfirmDelete = () => {
         if (itemToDelete) {
             deleteCargo(itemToDelete);
@@ -270,9 +314,14 @@ const CargoTable = () => {
         fetchData();
     };
 
+    /**
+     * Renders a single row in the cargo table.
+     * @param {object} cargo - The cargo object to render.
+     * @returns {React.ReactElement} A table row element.
+     */
     const renderRow = (cargo) => {
         if (cargo.id === 'new') {
-            return React.createElement('tr', null,
+            return React.createElement('tr', { key: 'new' },
                 React.createElement('td', null, 'Авто'),
                 React.createElement('td', null, React.createElement('input', {
                     className: 'form-control',
@@ -283,7 +332,7 @@ const CargoTable = () => {
                     className: `form-control badge badge-${typeClassMap[cargo.type] || 'secondary'}`,
                     value: cargo.type,
                     onChange: (e) => handleInputChange('new', 'type', e.target.value)
-                }, ['обычный', 'опасный', 'скоропортящийся'].map(opt => React.createElement('option', { value: opt }, opt)))),
+                }, ['обычный', 'опасный', 'скоропортящийся'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
                 React.createElement('td', null, React.createElement('input', {
                     className: 'form-control',
                     value: cargo.sender,
@@ -298,7 +347,7 @@ const CargoTable = () => {
                     className: 'form-control',
                     value: cargo.routeId || '',
                     onChange: (e) => handleInputChange('new', 'routeId', e.target.value ? parseInt(e.target.value) : null)
-                }, [React.createElement('option', { value: '' }, 'Без маршрута'), ...routes.map(route => React.createElement('option', { value: route.id }, `Маршрут ${route.id} (${route.status})`))])),
+                }, [React.createElement('option', { key: '', value: '' }, 'Без маршрута'), ...routes.map(route => React.createElement('option', { key: route.id, value: route.id }, `Маршрут ${route.id} (${route.status})`))])),
                 React.createElement('td', null, React.createElement('input', {
                     type: 'number',
                     className: 'form-control',
@@ -311,7 +360,7 @@ const CargoTable = () => {
                 )
             );
         }
-        return React.createElement('tr', null,
+        return React.createElement('tr', { key: cargo.id },
             React.createElement('td', null, cargo.id),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
@@ -322,7 +371,7 @@ const CargoTable = () => {
                 className: `form-control badge badge-${typeClassMap[cargo.type] || 'secondary'}`,
                 value: cargo.type,
                 onChange: (e) => handleInputChange(cargo.id, 'type', e.target.value)
-            }, ['обычный', 'опасный', 'скоропортящийся'].map(opt => React.createElement('option', { value: opt }, opt)))),
+            }, ['обычный', 'опасный', 'скоропортящийся'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
                 value: cargo.sender,
@@ -337,7 +386,7 @@ const CargoTable = () => {
                 className: 'form-control',
                 value: cargo.routeId || '',
                 onChange: (e) => handleInputChange(cargo.id, 'routeId', e.target.value ? parseInt(e.target.value) : null)
-            }, [React.createElement('option', { value: '' }, 'Без маршрута'), ...routes.map(route => React.createElement('option', { value: route.id }, `Маршрут ${route.id} (${route.status})`))])),
+            }, [React.createElement('option', { key: '', value: '' }, 'Без маршрута'), ...routes.map(route => React.createElement('option', { key: route.id, value: route.id }, `Маршрут ${route.id} (${route.status})`))])),
             React.createElement('td', null, React.createElement('input', {
                 type: 'number',
                 className: 'form-control',
@@ -363,7 +412,7 @@ const CargoTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'Название', 'Тип', 'Отправитель', 'Получатель', 'Маршрут', 'Затраты на обработку', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'Название', 'Тип', 'Отправитель', 'Получатель', 'Маршрут', 'Затраты на обработку', 'Действия'].map(header => React.createElement('th', { key: header }, header))
                 )
             ),
             React.createElement('tbody', null, cargoData.map(cargo => renderRow(cargo)))
@@ -373,7 +422,13 @@ const CargoTable = () => {
     );
 };
 
-// Компонент StaffTable
+/**
+ * A React component for managing staff in a table.
+ * @state {string} searchQuery - The current text in the search input.
+ * @state {Array<object>} staffData - An array of staff objects to display.
+ * @state {number | null} itemToDelete - The ID of the staff member marked for deletion.
+ * @returns {React.ReactElement} The StaffTable component.
+ */
 const StaffTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [staffData, setStaffData] = React.useState([]);
@@ -415,6 +470,10 @@ const StaffTable = () => {
         $('#confirmDeleteModal').modal('show');
     };
 
+    /**
+     * Handles the confirmation of a delete operation from the modal.
+     * It calls the deleteStaff function with the stored item ID.
+     */
     const handleConfirmDelete = () => {
         if (itemToDelete) {
             deleteStaff(itemToDelete);
@@ -435,9 +494,14 @@ const StaffTable = () => {
         fetchData();
     };
 
+    /**
+     * Renders a single row in the staff table.
+     * @param {object} staff - The staff object to render.
+     * @returns {React.ReactElement} A table row element.
+     */
     const renderRow = (staff) => {
         if (staff.id === 'new') {
-            return React.createElement('tr', null,
+            return React.createElement('tr', { key: 'new' },
                 React.createElement('td', null, 'Авто'),
                 React.createElement('td', null, React.createElement('input', {
                     className: 'form-control',
@@ -448,7 +512,7 @@ const StaffTable = () => {
                     className: 'form-control',
                     value: staff.position,
                     onChange: (e) => handleInputChange('new', 'position', e.target.value)
-                }, ['Менеджер по логистике', 'Оператор', 'Водитель', 'Диспетчер', 'Администратор'].map(opt => React.createElement('option', { value: opt }, opt)))),
+                }, ['Менеджер по логистике', 'Оператор', 'Водитель', 'Диспетчер', 'Администратор'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
                 React.createElement('td', null, React.createElement('input', {
                     type: 'date',
                     className: 'form-control',
@@ -459,7 +523,7 @@ const StaffTable = () => {
                     className: `form-control badge badge-${statusClassMap[staff.status] || 'info'}`,
                     value: staff.status,
                     onChange: (e) => handleInputChange('new', 'status', e.target.value)
-                }, ['активный', 'в отпуске', 'уволен'].map(opt => React.createElement('option', { value: opt }, opt)))),
+                }, ['активный', 'в отпуске', 'уволен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
                 React.createElement('td', null, React.createElement('input', {
                     type: 'number',
                     className: 'form-control',
@@ -472,7 +536,7 @@ const StaffTable = () => {
                 )
             );
         }
-        return React.createElement('tr', null,
+        return React.createElement('tr', { key: staff.id },
             React.createElement('td', null, staff.id),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
@@ -483,7 +547,7 @@ const StaffTable = () => {
                 className: 'form-control',
                 value: staff.position,
                 onChange: (e) => handleInputChange(staff.id, 'position', e.target.value)
-            }, ['Менеджер по логистике', 'Оператор', 'Водитель', 'Диспетчер', 'Администратор'].map(opt => React.createElement('option', { value: opt }, opt)))),
+            }, ['Менеджер по логистике', 'Оператор', 'Водитель', 'Диспетчер', 'Администратор'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 type: 'date',
                 className: 'form-control',
@@ -494,7 +558,7 @@ const StaffTable = () => {
                 className: `form-control badge badge-${statusClassMap[staff.status] || 'info'}`,
                 value: staff.status,
                 onChange: (e) => handleInputChange(staff.id, 'status', e.target.value)
-            }, ['активный', 'в отпуске', 'уволен'].map(opt => React.createElement('option', { value: opt }, opt)))),
+            }, ['активный', 'в отпуске', 'уволен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 type: 'number',
                 className: 'form-control',
@@ -520,7 +584,7 @@ const StaffTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'ФИО', 'Должность', 'Дата Приема', 'Статус', 'Зарплата', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'ФИО', 'Должность', 'Дата Приема', 'Статус', 'Зарплата', 'Действия'].map(header => React.createElement('th', { key: header }, header))
                 )
             ),
             React.createElement('tbody', null, staffData.map(staff => renderRow(staff)))
@@ -530,7 +594,14 @@ const StaffTable = () => {
     );
 };
 
-// Компонент TransportTable
+/**
+ * A React component for managing transport in a table.
+ * @state {string} searchQuery - The current text in the search input.
+ * @state {Array<object>} transportData - An array of transport objects to display.
+ * @state {Array<object>} drivers - An array of available drivers for selection.
+ * @state {number | null} itemToDelete - The ID of the transport item marked for deletion.
+ * @returns {React.ReactElement} The TransportTable component.
+ */
 const TransportTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [transportData, setTransportData] = React.useState([]);
@@ -572,14 +643,11 @@ const TransportTable = () => {
     };
 
     const deleteTransport = async (id) => {
-        console.log('Отправка запроса на удаление транспорта с ID:', id);
         const response = await fetch(`/transport/${id}`, { method: 'DELETE' });
         if (response.ok) {
-            console.log('Транспорт успешно удален');
             fetchData();
         } else {
             const result = await response.json();
-            console.log('Ошибка при удалении транспорта:', result.message);
             alert(result.message);
         }
     };
@@ -589,16 +657,18 @@ const TransportTable = () => {
         $('#confirmDeleteModal').modal('show');
     };
 
+    /**
+     * Handles the confirmation of a delete operation from the modal.
+     * It calls the deleteTransport function with the stored item ID.
+     */
     const handleConfirmDelete = () => {
         if (itemToDelete) {
-            console.log('Удаление транспорта с ID:', itemToDelete);
             deleteTransport(itemToDelete);
             setItemToDelete(null);
         }
     };
 
     const addTransport = () => {
-        console.log('Добавление нового транспорта');
         setTransportData(prev => [...prev, { id: 'new', type: 'грузовик', model: '', licensePlate: '', status: 'свободен', driver: null, maintenanceCost: 0 }]);
     };
 
@@ -616,15 +686,20 @@ const TransportTable = () => {
         fetchData();
     };
 
+    /**
+     * Renders a single row in the transport table.
+     * @param {object} transport - The transport object to render.
+     * @returns {React.ReactElement} A table row element.
+     */
     const renderRow = (transport) => {
         if (transport.id === 'new') {
-            return React.createElement('tr', null,
+            return React.createElement('tr', { key: 'new' },
                 React.createElement('td', null, 'Авто'),
                 React.createElement('td', null, React.createElement('select', {
                     className: 'form-control',
                     value: transport.type,
                     onChange: (e) => handleInputChange('new', 'type', e.target.value)
-                }, ['грузовик', 'поезд', 'самолет'].map(opt => React.createElement('option', { value: opt }, opt)))),
+                }, ['грузовик', 'поезд', 'самолет'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
                 React.createElement('td', null, React.createElement('input', {
                     className: 'form-control',
                     value: transport.model,
@@ -639,12 +714,12 @@ const TransportTable = () => {
                     className: `form-control badge badge-${statusClassMap[transport.status] || 'info'}`,
                     value: transport.status,
                     onChange: (e) => handleInputChange('new', 'status', e.target.value)
-                }, ['в работе', 'на ремонте', 'свободен'].map(opt => React.createElement('option', { value: opt }, opt)))),
+                }, ['в работе', 'на ремонте', 'свободен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
                 React.createElement('td', null, React.createElement('select', {
                     className: 'form-control',
                     value: transport.driver || '',
                     onChange: (e) => handleInputChange('new', 'driver', e.target.value || null)
-                }, [React.createElement('option', { value: '' }, 'Без водителя'), ...drivers.map(driver => React.createElement('option', { value: driver.fullName }, driver.fullName))])),
+                }, [React.createElement('option', { key: '', value: '' }, 'Без водителя'), ...drivers.map(driver => React.createElement('option', { key: driver.id, value: driver.fullName }, driver.fullName))])),
                 React.createElement('td', null, React.createElement('input', {
                     type: 'number',
                     className: 'form-control',
@@ -657,13 +732,13 @@ const TransportTable = () => {
                 )
             );
         }
-        return React.createElement('tr', null,
+        return React.createElement('tr', { key: transport.id },
             React.createElement('td', null, transport.id),
             React.createElement('td', null, React.createElement('select', {
                 className: 'form-control',
                 value: transport.type,
                 onChange: (e) => handleInputChange(transport.id, 'type', e.target.value)
-            }, ['грузовик', 'поезд', 'самолет'].map(opt => React.createElement('option', { value: opt }, opt)))),
+            }, ['грузовик', 'поезд', 'самолет'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
                 value: transport.model,
@@ -678,12 +753,12 @@ const TransportTable = () => {
                 className: `form-control badge badge-${statusClassMap[transport.status] || 'info'}`,
                 value: transport.status,
                 onChange: (e) => handleInputChange(transport.id, 'status', e.target.value)
-            }, ['в работе', 'на ремонте', 'свободен'].map(opt => React.createElement('option', { value: opt }, opt)))),
+            }, ['в работе', 'на ремонте', 'свободен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
             React.createElement('td', null, React.createElement('select', {
                 className: 'form-control',
                 value: transport.driver || '',
                 onChange: (e) => handleInputChange(transport.id, 'driver', e.target.value || null)
-            }, [React.createElement('option', { value: '' }, 'Без водителя'), ...drivers.map(driver => React.createElement('option', { value: driver.fullName }, driver.fullName))])),
+            }, [React.createElement('option', { key: '', value: '' }, 'Без водителя'), ...drivers.map(driver => React.createElement('option', { key: driver.id, value: driver.fullName }, driver.fullName))])),
             React.createElement('td', null, React.createElement('input', {
                 type: 'number',
                 className: 'form-control',
@@ -709,7 +784,7 @@ const TransportTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'Тип', 'Модель', 'Гос. Номер', 'Статус', 'Водитель', 'Затраты на обслуживание', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'Тип', 'Модель', 'Гос. Номер', 'Статус', 'Водитель', 'Затраты на обслуживание', 'Действия'].map(header => React.createElement('th', { key: header }, header))
                 )
             ),
             React.createElement('tbody', null, transportData.map(transport => renderRow(transport)))
@@ -719,7 +794,15 @@ const TransportTable = () => {
     );
 };
 
-// Компонент ReportsTable
+/**
+ * A React component for managing reports in a table.
+ * @state {string} searchQuery - The current text in the search input.
+ * @state {Array<object>} reportsData - An array of report objects to display.
+ * @state {Array<object>} managers - An array of available managers for selection.
+ * @state {string} reportContent - The HTML content of the generated report.
+ * @state {number | null} itemToDelete - The ID of the report marked for deletion.
+ * @returns {React.ReactElement} The ReportsTable component.
+ */
 const ReportsTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [reportsData, setReportsData] = React.useState([]);
@@ -771,6 +854,10 @@ const ReportsTable = () => {
         $('#confirmDeleteModal').modal('show');
     };
 
+    /**
+     * Handles the confirmation of a delete operation from the modal.
+     * It calls the deleteReport function with the stored item ID.
+     */
     const handleConfirmDelete = () => {
         if (itemToDelete) {
             deleteReport(itemToDelete);
@@ -822,8 +909,80 @@ const ReportsTable = () => {
         window.location.href = `/export-report?currentUserRole=${encodeURIComponent(currentUserRole)}`;
     };
 
+    /**
+     * Renders a single row in the reports table.
+     * @param {object} report - The report object to render.
+     * @returns {React.ReactElement} A table row element.
+     */
     const renderRow = (report) => {
-        // ... (остальной код renderRow без изменений)
+        if (report.id === 'new') {
+            return React.createElement('tr', { key: 'new' },
+                React.createElement('td', null, 'Авто'),
+                React.createElement('td', null, React.createElement('input', {
+                    className: 'form-control',
+                    value: report.type,
+                    onChange: (e) => handleInputChange('new', 'type', e.target.value)
+                })),
+                React.createElement('td', null, React.createElement('input', {
+                    type: 'date',
+                    className: 'form-control',
+                    value: report.creationDate,
+                    onChange: (e) => handleInputChange('new', 'creationDate', e.target.value)
+                })),
+                React.createElement('td', null, React.createElement('input', {
+                    className: 'form-control',
+                    value: report.reportPeriod,
+                    onChange: (e) => handleInputChange('new', 'reportPeriod', e.target.value)
+                })),
+                React.createElement('td', null, React.createElement('select', {
+                    className: 'form-control',
+                    value: report.author || '',
+                    onChange: (e) => handleInputChange('new', 'author', e.target.value || null)
+                }, [React.createElement('option', { key: '', value: '' }, 'Без автора'), ...managers.map(manager => React.createElement('option', { key: manager.id, value: manager.fullName }, manager.fullName))])),
+                React.createElement('td', null, React.createElement('select', {
+                    className: `form-control badge badge-${statusClassMap[report.status] || 'info'}`,
+                    value: report.status,
+                    onChange: (e) => handleInputChange('new', 'status', e.target.value)
+                }, ['в разработке', 'утвержден', 'завершен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
+                React.createElement('td', null,
+                    React.createElement('button', { className: 'btn btn-success btn-sm', onClick: () => saveNewReport(report) }, 'Сохранить'),
+                    React.createElement('button', { className: 'btn btn-secondary btn-sm', onClick: () => setReportsData(prev => prev.filter(item => item.id !== 'new')) }, 'Отмена')
+                )
+            );
+        }
+        return React.createElement('tr', { key: report.id },
+            React.createElement('td', null, report.id),
+            React.createElement('td', null, React.createElement('input', {
+                className: 'form-control',
+                value: report.type,
+                onChange: (e) => handleInputChange(report.id, 'type', e.target.value)
+            })),
+            React.createElement('td', null, React.createElement('input', {
+                type: 'date',
+                className: 'form-control',
+                value: report.creationDate,
+                onChange: (e) => handleInputChange(report.id, 'creationDate', e.target.value)
+            })),
+            React.createElement('td', null, React.createElement('input', {
+                className: 'form-control',
+                value: report.reportPeriod,
+                onChange: (e) => handleInputChange(report.id, 'reportPeriod', e.target.value)
+            })),
+            React.createElement('td', null, React.createElement('select', {
+                className: 'form-control',
+                value: report.author || '',
+                onChange: (e) => handleInputChange(report.id, 'author', e.target.value || null)
+            }, [React.createElement('option', { key: '', value: '' }, 'Без автора'), ...managers.map(manager => React.createElement('option', { key: manager.id, value: manager.fullName }, manager.fullName))])),
+            React.createElement('td', null, React.createElement('select', {
+                className: `form-control badge badge-${statusClassMap[report.status] || 'info'}`,
+                value: report.status,
+                onChange: (e) => handleInputChange(report.id, 'status', e.target.value)
+            }, ['в разработке', 'утвержден', 'завершен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
+            React.createElement('td', null,
+                React.createElement('button', { className: 'btn btn-primary btn-sm', onClick: () => updateReport(report.id) }, 'Обновить'),
+                React.createElement('button', { className: 'btn btn-danger btn-sm', onClick: () => confirmDelete(report.id) }, 'Удалить')
+            )
+        );
     };
 
     return React.createElement('div', { className: 'table-container' },
@@ -838,7 +997,7 @@ const ReportsTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'Тип', 'Дата Создания', 'Период', 'Автор', 'Статус', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'Тип', 'Дата Создания', 'Период', 'Автор', 'Статус', 'Действия'].map(header => React.createElement('th', { key: header }, header))
                 )
             ),
             React.createElement('tbody', null, reportsData.map(report => renderRow(report)))
@@ -851,7 +1010,14 @@ const ReportsTable = () => {
     );
 };
 
-// Компонент RoutesTable
+/**
+ * A React component for managing routes in a table.
+ * @state {string} searchQuery - The current text in the search input.
+ * @state {Array<object>} routesData - An array of route objects to display.
+ * @state {Array<object>} transport - An array of available transport vehicles for selection.
+ * @state {number | null} itemToDelete - The ID of the route marked for deletion.
+ * @returns {React.ReactElement} The RoutesTable component.
+ */
 const RoutesTable = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [routesData, setRoutesData] = React.useState([]);
@@ -889,12 +1055,12 @@ const RoutesTable = () => {
             alert(error.message);
             return;
         }
-        await fetchData(); // Обновляем данные после успешного запроса
+        await fetchData();
     };
 
     const deleteRoute = async (id) => {
         await fetch(`/routes/${id}`, { method: 'DELETE' });
-        await fetchData(); // Обновляем данные после удаления
+        await fetchData();
     };
 
     const confirmDelete = (id) => {
@@ -902,6 +1068,10 @@ const RoutesTable = () => {
         $('#confirmDeleteModal').modal('show');
     };
 
+    /**
+     * Handles the confirmation of a delete operation from the modal.
+     * It calls the deleteRoute function with the stored item ID.
+     */
     const handleConfirmDelete = () => {
         if (itemToDelete) {
             deleteRoute(itemToDelete);
@@ -924,21 +1094,23 @@ const RoutesTable = () => {
             alert(error.message);
             return;
         }
-        await fetchData(); // Обновляем данные после успешного запроса
+        await fetchData();
     };
 
+    /**
+     * Renders a single row in the routes table.
+     * @param {object} route - The route object to render.
+     * @returns {React.ReactElement} A table row element.
+     */
     const renderRow = (route) => {
-        const selectedTransport = transport.find(t => t.id === route.transportId);
-        const transportDisplay = selectedTransport ? `${selectedTransport.model} (${selectedTransport.status})` : 'Выберите транспорт';
-
         if (route.id === 'new') {
-            return React.createElement('tr', null,
+            return React.createElement('tr', { key: 'new' },
                 React.createElement('td', null, 'Авто'),
                 React.createElement('td', null, React.createElement('select', {
                     className: 'form-control',
                     value: route.transportId,
                     onChange: (e) => handleInputChange('new', 'transportId', parseInt(e.target.value))
-                }, transport.map(t => React.createElement('option', { value: t.id }, `${t.model} (${t.status})`)))),
+                }, transport.map(t => React.createElement('option', { key: t.id, value: t.id }, `${t.model} (${t.status})`)))),
                 React.createElement('td', null, React.createElement('input', {
                     className: 'form-control',
                     value: route.startPoint,
@@ -965,7 +1137,7 @@ const RoutesTable = () => {
                     className: `form-control badge badge-${statusClassMap[route.status] || 'info'}`,
                     value: route.status,
                     onChange: (e) => handleInputChange('new', 'status', e.target.value)
-                }, ['в пути', 'доставлен', 'отменен'].map(opt => React.createElement('option', { value: opt }, opt)))),
+                }, ['в пути', 'доставлен', 'отменен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
                 React.createElement('td', null, React.createElement('input', {
                     type: 'number',
                     className: 'form-control',
@@ -978,13 +1150,13 @@ const RoutesTable = () => {
                 )
             );
         }
-        return React.createElement('tr', null,
+        return React.createElement('tr', { key: route.id },
             React.createElement('td', null, route.id),
             React.createElement('td', null, React.createElement('select', {
                 className: 'form-control',
                 value: route.transportId,
                 onChange: (e) => handleInputChange(route.id, 'transportId', parseInt(e.target.value))
-            }, transport.map(t => React.createElement('option', { value: t.id }, `${t.model} (${t.status})`)))),
+            }, transport.map(t => React.createElement('option', { key: t.id, value: t.id }, `${t.model} (${t.status})`)))),
             React.createElement('td', null, React.createElement('input', {
                 className: 'form-control',
                 value: route.startPoint,
@@ -1011,7 +1183,7 @@ const RoutesTable = () => {
                 className: `form-control badge badge-${statusClassMap[route.status] || 'info'}`,
                 value: route.status,
                 onChange: (e) => handleInputChange(route.id, 'status', e.target.value)
-            }, ['в пути', 'доставлен', 'отменен'].map(opt => React.createElement('option', { value: opt }, opt)))),
+            }, ['в пути', 'доставлен', 'отменен'].map(opt => React.createElement('option', { key: opt, value: opt }, opt)))),
             React.createElement('td', null, React.createElement('input', {
                 type: 'number',
                 className: 'form-control',
@@ -1037,7 +1209,7 @@ const RoutesTable = () => {
         React.createElement('table', { className: 'table table-striped' },
             React.createElement('thead', null,
                 React.createElement('tr', null,
-                    ['ID', 'Транспорт', 'Начало', 'Конец', 'Предп. Время', 'Факт. Время', 'Статус', 'Доход (в белорусских рублях)', 'Действия'].map(header => React.createElement('th', null, header))
+                    ['ID', 'Транспорт', 'Начало', 'Конец', 'Предп. Время', 'Факт. Время', 'Статус', 'Доход (в белорусских рублях)', 'Действия'].map(header => React.createElement('th', { key: header }, header))
                 )
             ),
             React.createElement('tbody', null, routesData.map(route => renderRow(route)))
@@ -1047,13 +1219,12 @@ const RoutesTable = () => {
     );
 };
 
-
-
-
-// Функции управления формами и аутентификацией (без изменений)
-
 let currentUserRole = '';
 
+/**
+ * Handles the login form submission.
+ * @param {Event} event - The form submission event.
+ */
 document.getElementById('loginForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     const username = document.getElementById('username').value;
@@ -1065,7 +1236,7 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     });
     const data = await response.json();
     if (data.message === 'Вход выполнен успешно!') {
-        currentUserRole = data.role; // Сохраняем роль текущего пользователя
+        currentUserRole = data.role;
         document.getElementById('mainContainer').style.opacity = '0';
         document.getElementById('authContainer').style.opacity = '0';
         setTimeout(() => {
@@ -1088,18 +1259,24 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     }
 });
 
+/**
+ * Logs the user out of the application and returns to the login screen.
+ */
 function logout() {
     const dashboard = document.getElementById('dashboard');
     const mainContainer = document.getElementById('mainContainer');
     const authContainer = document.getElementById('authContainer');
-    const loginForm = document.getElementById('login-form');
+    const loginForm = document.getElementById('loginForm');
 
     dashboard.style.opacity = '0';
     setTimeout(() => {
         dashboard.style.display = 'none';
         dashboard.classList.remove('visible');
         document.getElementById('contentArea').innerHTML = '';
-        ReactDOM.unmountComponentAtNode(document.getElementById('modalContentArea'));
+        const modalContentArea = document.getElementById('modalContentArea');
+        if (modalContentArea) {
+            ReactDOM.unmountComponentAtNode(modalContentArea);
+        }
 
         mainContainer.style.display = 'flex';
         authContainer.style.display = 'flex';
@@ -1115,41 +1292,58 @@ function logout() {
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
         document.getElementById('error-message').textContent = '';
+        currentUserRole = '';
     }, 500);
 }
 
+/**
+ * Loads a specific management section (e.g., 'cargo', 'staff') into the main modal.
+ * It performs an authorization check before loading the section.
+ * @param {string} section - The name of the section to load ('cargo', 'staff', 'transport', 'reports', 'routes', 'users').
+ */
 function loadSection(section) {
-    // Проверка доступа для таблицы "Пользователи"
     if (section === 'users' && currentUserRole !== 'Администратор') {
         alert('Доступ запрещен: только администраторы могут управлять пользователями.');
         return;
     }
-    // Проверка доступа для таблицы "Отчёты"
     if (section === 'reports' && !['Менеджер', 'Администратор'].includes(currentUserRole)) {
         alert('Доступ запрещен: только менеджеры и администраторы могут работать с отчётами.');
         return;
     }
+
     const modalContentArea = document.getElementById('modalContentArea');
     let tableComponent;
 
-    if (section === 'cargo') {
-        tableComponent = React.createElement(CargoTable);
-    } else if (section === 'staff') {
-        tableComponent = React.createElement(StaffTable);
-    } else if (section === 'transport') {
-        tableComponent = React.createElement(TransportTable);
-    } else if (section === 'reports') {
-        tableComponent = React.createElement(ReportsTable);
-    } else if (section === 'routes') {
-        tableComponent = React.createElement(RoutesTable);
-    } else if (section === 'users') {
-        tableComponent = React.createElement(UsersTable);
+    switch (section) {
+        case 'cargo':
+            tableComponent = React.createElement(CargoTable);
+            break;
+        case 'staff':
+            tableComponent = React.createElement(StaffTable);
+            break;
+        case 'transport':
+            tableComponent = React.createElement(TransportTable);
+            break;
+        case 'reports':
+            tableComponent = React.createElement(ReportsTable);
+            break;
+        case 'routes':
+            tableComponent = React.createElement(RoutesTable);
+            break;
+        case 'users':
+            tableComponent = React.createElement(UsersTable);
+            break;
+        default:
+            return;
     }
 
     ReactDOM.render(tableComponent, modalContentArea);
     $('#tableModal').modal('show');
 }
 
+/**
+ * Toggles the dark/light theme for the application and saves the preference in local storage.
+ */
 function toggleTheme() {
     document.body.classList.toggle('dark-theme');
     const isDarkTheme = document.body.classList.contains('dark-theme');
@@ -1157,6 +1351,9 @@ function toggleTheme() {
     document.body.style.background = isDarkTheme ? '#333' : '#f4f4f9';
 }
 
+/**
+ * Applies the saved theme from local storage when the window loads.
+ */
 window.addEventListener('load', () => {
     const theme = localStorage.getItem('theme');
     if (theme === 'dark') document.body.classList.add('dark-theme');
