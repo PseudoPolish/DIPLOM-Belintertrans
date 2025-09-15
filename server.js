@@ -1,4 +1,4 @@
-// ФАЙЛ SERVER.JS 
+// ФАЙЛ SERVER.JS
 const express = require('express');
 const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
@@ -16,7 +16,9 @@ const db = new sqlite3.Database('./database.db', (err) => {
     else console.log('Подключено к базе данных SQLite');
 });
 
+// This block of code ensures that the database schema is created when the server starts.
 db.serialize(() => {
+    // Create the users table if it doesn't exist.
     db.run(`
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,7 +27,7 @@ db.serialize(() => {
             role TEXT NOT NULL DEFAULT 'Диспетчер'
         )`);
 
-    // Добавление пользователя EGOR с ролью "Администратор"
+    // Add a default admin user if one doesn't exist.
     db.get('SELECT * FROM users WHERE username = ?', ['EGOR'], (err, row) => {
         if (!row) {
             db.run('INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
@@ -34,6 +36,8 @@ db.serialize(() => {
                 });
         }
     });
+
+    // Create the cargo table if it doesn't exist.
     db.run(`
         CREATE TABLE IF NOT EXISTS cargo (
             id INTEGER PRIMARY KEY,
@@ -45,6 +49,8 @@ db.serialize(() => {
             handlingCost REAL DEFAULT 0,
             FOREIGN KEY (routeId) REFERENCES routes(id)
         )`);
+
+    // Create the staff table if it doesn't exist.
     db.run(`
         CREATE TABLE IF NOT EXISTS staff (
             id INTEGER PRIMARY KEY,
@@ -54,6 +60,8 @@ db.serialize(() => {
             status TEXT NOT NULL,
             salary REAL DEFAULT 0
         )`);
+
+    // Create the transport table if it doesn't exist.
     db.run(`
         CREATE TABLE IF NOT EXISTS transport (
             id INTEGER PRIMARY KEY,
@@ -65,6 +73,8 @@ db.serialize(() => {
             maintenanceCost REAL DEFAULT 0,
             FOREIGN KEY (driverId) REFERENCES staff(id)
         )`);
+
+    // Create the reports table if it doesn't exist.
     db.run(`
         CREATE TABLE IF NOT EXISTS reports (
             id INTEGER PRIMARY KEY,
@@ -75,6 +85,8 @@ db.serialize(() => {
             status TEXT NOT NULL,
             FOREIGN KEY (authorId) REFERENCES staff(id)
         )`);
+
+    // Create the routes table if it doesn't exist.
     db.run(`
         CREATE TABLE IF NOT EXISTS routes (
             id INTEGER PRIMARY KEY,
@@ -87,9 +99,30 @@ db.serialize(() => {
             revenue REAL DEFAULT 0,
             FOREIGN KEY (transportId) REFERENCES transport(id)
         )`);
+
+    // This logic hashes any un-hashed passwords in the database.
+    db.all('SELECT id, password FROM users', async (err, rows) => {
+        if (err) {
+            console.error('Ошибка при получении пользователей:', err);
+            return;
+        }
+        for (const row of rows) {
+            if (!row.password.startsWith('$')) {
+                const hashedPassword = await bcrypt.hash(row.password, 10);
+                db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, row.id], (err) => {
+                    if (err) console.error(`Ошибка при обновлении пароля для ID ${row.id}:`, err);
+                    else console.log(`Пароль для ID ${row.id} успешно обновлен`);
+                });
+            }
+        }
+    });
 });
 
-// Функция для поиска минимального свободного ID
+/**
+ * Finds the next available ID in a table.
+ * @param {string} table The name of the table.
+ * @param {function(Error, number): void} callback The callback function.
+ */
 function getNextAvailableId(table, callback) {
     db.all(`SELECT id FROM ${table} ORDER BY id`, (err, rows) => {
         if (err) return callback(err);
@@ -102,7 +135,12 @@ function getNextAvailableId(table, callback) {
     });
 }
 
-// Функция для обновления ID после удаления
+/**
+ * Updates the IDs of rows in a table after a row has been deleted.
+ * @param {string} table The name of the table.
+ * @param {number} deletedId The ID of the deleted row.
+ * @param {function(Error): void} callback The callback function.
+ */
 function updateIdsAfterDelete(table, deletedId, callback) {
     db.all(`SELECT * FROM ${table} WHERE id > ? ORDER BY id ASC`, [deletedId], (err, rows) => {
         if (err) return callback(err);
@@ -119,7 +157,14 @@ function updateIdsAfterDelete(table, deletedId, callback) {
     });
 }
 
-// Функция для обновления внешних ключей
+/**
+ * Updates foreign keys in a referencing table after a row has been deleted from the referenced table.
+ * @param {string} referencingTable The name of the table with the foreign key.
+ * @param {string} foreignKey The name of the foreign key column.
+ * @param {string} referencedTable The name of the table being referenced.
+ * @param {number} deletedId The ID of the deleted row in the referenced table.
+ * @param {function(Error): void} callback The callback function.
+ */
 function updateForeignKeysAfterDelete(referencingTable, foreignKey, referencedTable, deletedId, callback) {
     db.all(`SELECT * FROM ${referencingTable} WHERE ${foreignKey} > ?`, [deletedId], (err, rows) => {
         if (err) return callback(err);
@@ -136,6 +181,12 @@ function updateForeignKeysAfterDelete(referencingTable, foreignKey, referencedTa
     });
 }
 
+/**
+ * Middleware to set the Content-Type header to text/html; charset=UTF-8.
+ * @param {object} req - The request object.
+ * @param {object} res - The response object.
+ * @param {function} next - The next middleware function.
+ */
 app.use((req, res, next) => {
     res.setHeader('Content-Type', 'text/html; charset=UTF-8');
     next();
@@ -143,7 +194,13 @@ app.use((req, res, next) => {
 
 // Пользователи
 
-// Получение списка пользователей с ролями
+/**
+ * @route GET /users
+ * @group Users - Operations about users
+ * @param {string} search.query.optional - search query
+ * @returns {object} 200 - An array of users
+ * @returns {Error}  500 - Server error
+ */
 app.get('/users', (req, res) => {
     const searchQuery = req.query.search || '';
     const sql = 'SELECT id, username, role FROM users WHERE CAST(id AS TEXT) LIKE ? OR username LIKE ? OR role LIKE ?';
@@ -154,7 +211,16 @@ app.get('/users', (req, res) => {
     });
 });
 
-// Добавление нового пользователя
+/**
+ * @route POST /users
+ * @group Users - Operations about users
+ * @param {string} username.body.required - the username
+ * @param {string} password.body.required - the password
+ * @param {string} role.body.required - the user role
+ * @returns {object} 200 - User added
+ * @returns {Error}  400 - User already exists
+ * @returns {Error}  500 - Server error
+ */
 app.post('/users', async (req, res) => {
     const { username, password, role } = req.body;
     db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
@@ -173,7 +239,19 @@ app.post('/users', async (req, res) => {
     });
 });
 
-// Обновление пользователя с проверкой роли текущего пользователя
+/**
+ * @route PUT /users/{id}
+ * @group Users - Operations about users
+ * @param {string} id.path.required - the user ID
+ * @param {string} username.body.optional - the username
+ * @param {string} password.body.optional - the password
+ * @param {string} role.body.optional - the user role
+ * @param {string} currentUserRole.body.required - the role of the current user
+ * @returns {object} 200 - User updated
+ * @returns {Error}  403 - Forbidden
+ * @returns {Error}  404 - User not found
+ * @returns {Error}  500 - Server error
+ */
 app.put('/users/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const { username, password, role, currentUserRole } = req.body;
@@ -194,7 +272,16 @@ app.put('/users/:id', async (req, res) => {
     });
 });
 
-// Удаление пользователя с проверкой роли
+/**
+ * @route DELETE /users/{id}
+ * @group Users - Operations about users
+ * @param {string} id.path.required - the user ID
+ * @param {string} currentUserRole.query.required - the role of the current user
+ * @returns {object} 200 - User deleted
+ * @returns {Error}  403 - Forbidden
+ * @returns {Error}  404 - User not found
+ * @returns {Error}  500 - Server error
+ */
 app.delete('/users/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const currentUserRole = req.query.currentUserRole; // Получаем роль через query-параметр
@@ -214,6 +301,15 @@ app.delete('/users/:id', (req, res) => {
     });
 });
 
+/**
+ * @route POST /register
+ * @group Authentication - Operations about authentication
+ * @param {string} username.body.required - the username
+ * @param {string} password.body.required - the password
+ * @returns {object} 200 - Registration successful
+ * @returns {Error}  400 - User already exists
+ * @returns {Error}  500 - Server error
+ */
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
     db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
@@ -227,24 +323,15 @@ app.post('/register', async (req, res) => {
     });
 });
 
-db.all('SELECT id, password FROM users', async (err, rows) => {
-    if (err) {
-        console.error('Ошибка при получении пользователей:', err);
-        return;
-    }
-    for (const row of rows) {
-        // Check if the password is already hashed (bcrypt hashes start with $)
-        if (!row.password.startsWith('$')) {
-            const hashedPassword = await bcrypt.hash(row.password, 10);
-            db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, row.id], (err) => {
-                if (err) console.error(`Ошибка при обновлении пароля для ID ${row.id}:`, err);
-                else console.log(`Пароль для ID ${row.id} успешно обновлен`);
-            });
-        }
-    }
-});
-
-// Логин с возвратом роли
+/**
+ * @route POST /login
+ * @group Authentication - Operations about authentication
+ * @param {string} username.body.required - the username
+ * @param {string} password.body.required - the password
+ * @returns {object} 200 - Login successful
+ * @returns {Error}  401 - Invalid credentials
+ * @returns {Error}  500 - Server error
+ */
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
@@ -260,18 +347,25 @@ app.post('/login', (req, res) => {
 });
 
 // Грузы
+/**
+ * @route GET /cargo
+ * @group Cargo - Operations about cargo
+ * @param {string} search.query.optional - search query
+ * @returns {object} 200 - An array of cargo
+ * @returns {Error}  500 - Server error
+ */
 app.get('/cargo', (req, res) => {
     const searchQuery = req.query.search || '';
     const sql = `
-        SELECT c.*, r.id as routeId, r.status as routeStatus 
-        FROM cargo c 
-        LEFT JOIN routes r ON c.routeId = r.id 
-        WHERE 
-            CAST(c.id AS TEXT) LIKE ? OR 
-            c.name LIKE ? OR 
-            c.type LIKE ? OR 
-            c.sender LIKE ? OR 
-            c.receiver LIKE ? OR 
+        SELECT c.*, r.id as routeId, r.status as routeStatus
+        FROM cargo c
+        LEFT JOIN routes r ON c.routeId = r.id
+        WHERE
+            CAST(c.id AS TEXT) LIKE ? OR
+            c.name LIKE ? OR
+            c.type LIKE ? OR
+            c.sender LIKE ? OR
+            c.receiver LIKE ? OR
             CAST(c.routeId AS TEXT) LIKE ?
     `;
     const params = [`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`];
@@ -281,6 +375,18 @@ app.get('/cargo', (req, res) => {
     });
 });
 
+/**
+ * @route POST /cargo
+ * @group Cargo - Operations about cargo
+ * @param {string} name.body.required - the cargo name
+ * @param {string} type.body.required - the cargo type
+ * @param {string} sender.body.required - the sender
+ * @param {string} receiver.body.required - the receiver
+ * @param {number} routeId.body.optional - the route ID
+ * @param {number} handlingCost.body.optional - the handling cost
+ * @returns {object} 200 - Cargo added
+ * @returns {Error}  500 - Server error
+ */
 app.post('/cargo', (req, res) => {
     const { name, type, sender, receiver, routeId, handlingCost } = req.body;
     getNextAvailableId('cargo', (err, nextId) => {
@@ -293,6 +399,20 @@ app.post('/cargo', (req, res) => {
     });
 });
 
+/**
+ * @route PUT /cargo/{id}
+ * @group Cargo - Operations about cargo
+ * @param {string} id.path.required - the cargo ID
+ * @param {string} name.body.required - the cargo name
+ * @param {string} type.body.required - the cargo type
+ * @param {string} sender.body.required - the sender
+ * @param {string} receiver.body.required - the receiver
+ * @param {number} routeId.body.optional - the route ID
+ * @param {number} handlingCost.body.optional - the handling cost
+ * @returns {object} 200 - Cargo updated
+ * @returns {Error}  404 - Cargo not found
+ * @returns {Error}  500 - Server error
+ */
 app.put('/cargo/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { name, type, sender, receiver, routeId, handlingCost } = req.body;
@@ -304,6 +424,14 @@ app.put('/cargo/:id', (req, res) => {
         });
 });
 
+/**
+ * @route DELETE /cargo/{id}
+ * @group Cargo - Operations about cargo
+ * @param {string} id.path.required - the cargo ID
+ * @returns {object} 200 - Cargo deleted
+ * @returns {Error}  404 - Cargo not found
+ * @returns {Error}  500 - Server error
+ */
 app.delete('/cargo/:id', (req, res) => {
     const id = parseInt(req.params.id);
     db.get('SELECT * FROM cargo WHERE id = ?', [id], (err, row) => {
@@ -320,17 +448,26 @@ app.delete('/cargo/:id', (req, res) => {
 });
 
 // Персонал
+/**
+ * @route GET /staff
+ * @group Staff - Operations about staff
+ * @param {string} search.query.optional - search query
+ * @param {string} status.query.optional - status filter
+ * @param {string} position.query.optional - position filter
+ * @returns {object} 200 - An array of staff
+ * @returns {Error}  500 - Server error
+ */
 app.get('/staff', (req, res) => {
     const searchQuery = req.query.search || '';
     const statusFilter = req.query.status ? req.query.status.split(',') : [];
     const positionFilter = req.query.position || '';
     let sql = `
-        SELECT * FROM staff 
-        WHERE 
-            CAST(id AS TEXT) LIKE ? OR 
-            fullName LIKE ? OR 
-            position LIKE ? OR 
-            hireDate LIKE ? OR 
+        SELECT * FROM staff
+        WHERE
+            CAST(id AS TEXT) LIKE ? OR
+            fullName LIKE ? OR
+            position LIKE ? OR
+            hireDate LIKE ? OR
             status LIKE ?
     `;
     let params = [`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`];
@@ -350,6 +487,17 @@ app.get('/staff', (req, res) => {
     });
 });
 
+/**
+ * @route POST /staff
+ * @group Staff - Operations about staff
+ * @param {string} fullName.body.required - the full name
+ * @param {string} position.body.required - the position
+ * @param {string} hireDate.body.required - the hire date
+ * @param {string} status.body.required - the status
+ * @param {number} salary.body.optional - the salary
+ * @returns {object} 200 - Staff added
+ * @returns {Error}  500 - Server error
+ */
 app.post('/staff', (req, res) => {
     const { fullName, position, hireDate, status, salary } = req.body;
     getNextAvailableId('staff', (err, nextId) => {
@@ -362,6 +510,19 @@ app.post('/staff', (req, res) => {
     });
 });
 
+/**
+ * @route PUT /staff/{id}
+ * @group Staff - Operations about staff
+ * @param {string} id.path.required - the staff ID
+ * @param {string} fullName.body.required - the full name
+ * @param {string} position.body.required - the position
+ * @param {string} hireDate.body.required - the hire date
+ * @param {string} status.body.required - the status
+ * @param {number} salary.body.optional - the salary
+ * @returns {object} 200 - Staff updated
+ * @returns {Error}  404 - Staff not found
+ * @returns {Error}  500 - Server error
+ */
 app.put('/staff/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { fullName, position, hireDate, status, salary } = req.body;
@@ -383,6 +544,14 @@ app.put('/staff/:id', (req, res) => {
         });
 });
 
+/**
+ * @route DELETE /staff/{id}
+ * @group Staff - Operations about staff
+ * @param {string} id.path.required - the staff ID
+ * @returns {object} 200 - Staff deleted
+ * @returns {Error}  404 - Staff not found
+ * @returns {Error}  500 - Server error
+ */
 app.delete('/staff/:id', (req, res) => {
     const id = parseInt(req.params.id);
     db.get('SELECT * FROM staff WHERE id = ?', [id], (err, row) => {
@@ -405,20 +574,28 @@ app.delete('/staff/:id', (req, res) => {
 });
 
 // Транспорт
+/**
+ * @route GET /transport
+ * @group Transport - Operations about transport
+ * @param {string} search.query.optional - search query
+ * @param {string} status.query.optional - status filter
+ * @returns {object} 200 - An array of transport
+ * @returns {Error}  500 - Server error
+ */
 app.get('/transport', (req, res) => {
     const searchQuery = req.query.search || '';
     const statusFilter = req.query.status ? req.query.status.split(',') : [];
     let sql = `
-        SELECT t.*, s.fullName as driver 
-        FROM transport t 
-        LEFT JOIN staff s ON t.driverId = s.id 
-        WHERE 
-            CAST(t.id AS TEXT) LIKE ? OR 
-            t.type LIKE ? OR 
-            t.model LIKE ? OR 
-            t.licensePlate LIKE ? OR 
-            t.status LIKE ? OR 
-            s.fullName LIKE ? OR 
+        SELECT t.*, s.fullName as driver
+        FROM transport t
+        LEFT JOIN staff s ON t.driverId = s.id
+        WHERE
+            CAST(t.id AS TEXT) LIKE ? OR
+            t.type LIKE ? OR
+            t.model LIKE ? OR
+            t.licensePlate LIKE ? OR
+            t.status LIKE ? OR
+            s.fullName LIKE ? OR
             CAST(t.driverId AS TEXT) LIKE ?
     `;
     let params = [`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`];
@@ -434,6 +611,19 @@ app.get('/transport', (req, res) => {
     });
 });
 
+/**
+ * @route POST /transport
+ * @group Transport - Operations about transport
+ * @param {string} type.body.required - the transport type
+ * @param {string} model.body.required - the model
+ * @param {string} licensePlate.body.required - the license plate
+ * @param {string} status.body.required - the status
+ * @param {string} driver.body.optional - the driver's full name
+ * @param {number} maintenanceCost.body.optional - the maintenance cost
+ * @returns {object} 200 - Transport added
+ * @returns {Error}  400 - Bad request
+ * @returns {Error}  500 - Server error
+ */
 app.post('/transport', (req, res) => {
     const { type, model, licensePlate, status, driver, maintenanceCost } = req.body;
     if (status === 'в работе') {
@@ -466,6 +656,21 @@ app.post('/transport', (req, res) => {
     }
 });
 
+/**
+ * @route PUT /transport/{id}
+ * @group Transport - Operations about transport
+ * @param {string} id.path.required - the transport ID
+ * @param {string} type.body.required - the transport type
+ * @param {string} model.body.required - the model
+ * @param {string} licensePlate.body.required - the license plate
+ * @param {string} status.body.required - the status
+ * @param {string} driver.body.optional - the driver's full name
+ * @param {number} maintenanceCost.body.optional - the maintenance cost
+ * @returns {object} 200 - Transport updated
+ * @returns {Error}  400 - Bad request
+ * @returns {Error}  404 - Transport not found
+ * @returns {Error}  500 - Server error
+ */
 app.put('/transport/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { type, model, licensePlate, status, driver, maintenanceCost } = req.body;
@@ -495,6 +700,14 @@ app.put('/transport/:id', (req, res) => {
     }
 });
 
+/**
+ * @route DELETE /transport/{id}
+ * @group Transport - Operations about transport
+ * @param {string} id.path.required - the transport ID
+ * @returns {object} 200 - Transport deleted
+ * @returns {Error}  404 - Transport not found
+ * @returns {Error}  500 - Server error
+ */
 app.delete('/transport/:id', (req, res) => {
     const id = parseInt(req.params.id);
     db.get('SELECT * FROM transport WHERE id = ?', [id], (err, row) => {
@@ -515,7 +728,12 @@ app.delete('/transport/:id', (req, res) => {
 
 // Отчеты
 
-
+/**
+ * Middleware to check user role for report access.
+ * @param {object} req - The request object.
+ * @param {object} res - The response object.
+ * @param {function} next - The next middleware function.
+ */
 app.use('/reports', (req, res, next) => {
     const currentUserRole = req.query.currentUserRole || req.body.currentUserRole;
     if (!['Менеджер', 'Администратор'].includes(currentUserRole)) {
@@ -523,19 +741,27 @@ app.use('/reports', (req, res, next) => {
     }
     next();
 });
+
+/**
+ * @route GET /reports
+ * @group Reports - Operations about reports
+ * @param {string} search.query.optional - search query
+ * @returns {object} 200 - An array of reports
+ * @returns {Error}  500 - Server error
+ */
 app.get('/reports', (req, res) => {
     const searchQuery = req.query.search || '';
     const sql = `
-        SELECT r.*, s.fullName as author 
-        FROM reports r 
-        LEFT JOIN staff s ON r.authorId = s.id 
-        WHERE 
-            CAST(r.id AS TEXT) LIKE ? OR 
-            r.type LIKE ? OR 
-            r.creationDate LIKE ? OR 
-            r.reportPeriod LIKE ? OR 
-            s.fullName LIKE ? OR 
-            r.status LIKE ? OR 
+        SELECT r.*, s.fullName as author
+        FROM reports r
+        LEFT JOIN staff s ON r.authorId = s.id
+        WHERE
+            CAST(r.id AS TEXT) LIKE ? OR
+            r.type LIKE ? OR
+            r.creationDate LIKE ? OR
+            r.reportPeriod LIKE ? OR
+            s.fullName LIKE ? OR
+            r.status LIKE ? OR
             CAST(r.authorId AS TEXT) LIKE ?
     `;
     const params = [`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`];
@@ -545,6 +771,17 @@ app.get('/reports', (req, res) => {
     });
 });
 
+/**
+ * @route POST /reports
+ * @group Reports - Operations about reports
+ * @param {string} type.body.required - the report type
+ * @param {string} creationDate.body.required - the creation date
+ * @param {string} reportPeriod.body.required - the report period
+ * @param {string} author.body.optional - the author's full name
+ * @param {string} status.body.required - the status
+ * @returns {object} 200 - Report added
+ * @returns {Error}  500 - Server error
+ */
 app.post('/reports', (req, res) => {
     const { type, creationDate, reportPeriod, author, status } = req.body;
     db.get('SELECT id FROM staff WHERE fullName = ? AND position = "Менеджер по логистике"', [author], (err, row) => {
@@ -561,6 +798,19 @@ app.post('/reports', (req, res) => {
     });
 });
 
+/**
+ * @route PUT /reports/{id}
+ * @group Reports - Operations about reports
+ * @param {string} id.path.required - the report ID
+ * @param {string} type.body.required - the report type
+ * @param {string} creationDate.body.required - the creation date
+ * @param {string} reportPeriod.body.required - the report period
+ * @param {string} author.body.optional - the author's full name
+ * @param {string} status.body.required - the status
+ * @returns {object} 200 - Report updated
+ * @returns {Error}  404 - Report not found
+ * @returns {Error}  500 - Server error
+ */
 app.put('/reports/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { type, creationDate, reportPeriod, author, status } = req.body;
@@ -576,6 +826,14 @@ app.put('/reports/:id', (req, res) => {
     });
 });
 
+/**
+ * @route DELETE /reports/{id}
+ * @group Reports - Operations about reports
+ * @param {string} id.path.required - the report ID
+ * @returns {object} 200 - Report deleted
+ * @returns {Error}  404 - Report not found
+ * @returns {Error}  500 - Server error
+ */
 app.delete('/reports/:id', (req, res) => {
     const id = parseInt(req.params.id);
     db.get('SELECT * FROM reports WHERE id = ?', [id], (err, row) => {
@@ -592,17 +850,24 @@ app.delete('/reports/:id', (req, res) => {
 });
 
 // Маршруты
+/**
+ * @route GET /routes
+ * @group Routes - Operations about routes
+ * @param {string} search.query.optional - search query
+ * @returns {object} 200 - An array of routes
+ * @returns {Error}  500 - Server error
+ */
 app.get('/routes', (req, res) => {
     const searchQuery = req.query.search || '';
     const sql = `
-        SELECT * FROM routes 
-        WHERE 
-            CAST(id AS TEXT) LIKE ? OR 
-            CAST(transportId AS TEXT) LIKE ? OR 
-            startPoint LIKE ? OR 
-            endPoint LIKE ? OR 
-            estimatedTime LIKE ? OR 
-            actualTime LIKE ? OR 
+        SELECT * FROM routes
+        WHERE
+            CAST(id AS TEXT) LIKE ? OR
+            CAST(transportId AS TEXT) LIKE ? OR
+            startPoint LIKE ? OR
+            endPoint LIKE ? OR
+            estimatedTime LIKE ? OR
+            actualTime LIKE ? OR
             status LIKE ?
     `;
     const params = [`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`];
@@ -612,6 +877,20 @@ app.get('/routes', (req, res) => {
     });
 });
 
+/**
+ * @route POST /routes
+ * @group Routes - Operations about routes
+ * @param {number} transportId.body.required - the transport ID
+ * @param {string} startPoint.body.required - the start point
+ * @param {string} endPoint.body.required - the end point
+ * @param {string} estimatedTime.body.required - the estimated time
+ * @param {string} actualTime.body.optional - the actual time
+ * @param {string} status.body.required - the status
+ * @param {number} revenue.body.optional - the revenue
+ * @returns {object} 200 - Route added
+ * @returns {Error}  400 - Bad request
+ * @returns {Error}  500 - Server error
+ */
 app.post('/routes', (req, res) => {
     const { transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue } = req.body;
     db.get('SELECT * FROM transport WHERE id = ? AND status IN (?, ?)', [transportId, 'в работе', 'свободен'], (err, transport) => {
@@ -631,6 +910,22 @@ app.post('/routes', (req, res) => {
     });
 });
 
+/**
+ * @route PUT /routes/{id}
+ * @group Routes - Operations about routes
+ * @param {string} id.path.required - the route ID
+ * @param {number} transportId.body.required - the transport ID
+ * @param {string} startPoint.body.required - the start point
+ * @param {string} endPoint.body.required - the end point
+ * @param {string} estimatedTime.body.required - the estimated time
+ * @param {string} actualTime.body.optional - the actual time
+ * @param {string} status.body.required - the status
+ * @param {number} revenue.body.optional - the revenue
+ * @returns {object} 200 - Route updated
+ * @returns {Error}  400 - Bad request
+ * @returns {Error}  404 - Route not found
+ * @returns {Error}  500 - Server error
+ */
 app.put('/routes/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const { transportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue } = req.body;
@@ -680,7 +975,19 @@ app.put('/routes/:id', (req, res) => {
     });
 });
 
-// Вспомогательная функция для обновления маршрута
+/**
+ * Helper function to update a route and handle the status of the old transport.
+ * @param {number} id - The route ID.
+ * @param {number} transportId - The new transport ID.
+ * @param {number} oldTransportId - The old transport ID.
+ * @param {string} startPoint - The start point.
+ * @param {string} endPoint - The end point.
+ * @param {string} estimatedTime - The estimated time.
+ * @param {string} actualTime - The actual time.
+ * @param {string} status - The status.
+ * @param {number} revenue - The revenue.
+ * @param {object} res - The response object.
+ */
 function updateRouteAndHandleOldTransport(id, transportId, oldTransportId, startPoint, endPoint, estimatedTime, actualTime, status, revenue, res) {
     db.run('UPDATE routes SET transportId = ?, startPoint = ?, endPoint = ?, estimatedTime = ?, actualTime = ?, status = ?, revenue = ? WHERE id = ?',
         [transportId, startPoint, endPoint, estimatedTime, actualTime || null, status, revenue || 0, id], function (err) {
@@ -690,6 +997,14 @@ function updateRouteAndHandleOldTransport(id, transportId, oldTransportId, start
         });
 }
 
+/**
+ * @route DELETE /routes/{id}
+ * @group Routes - Operations about routes
+ * @param {string} id.path.required - the route ID
+ * @returns {object} 200 - Route deleted
+ * @returns {Error}  404 - Route not found
+ * @returns {Error}  500 - Server error
+ */
 app.delete('/routes/:id', (req, res) => {
     const id = parseInt(req.params.id);
     db.get('SELECT * FROM routes WHERE id = ?', [id], (err, row) => {
@@ -719,7 +1034,14 @@ app.delete('/routes/:id', (req, res) => {
 });
 
 // Генерация и экспорт отчетов (без изменений)
-// Генерация отчета с модификаторами затрат
+/**
+ * @route GET /generate-report
+ * @group Reports - Operations about reports
+ * @param {string} currentUserRole.query.required - the role of the current user
+ * @returns {object} 200 - A report object
+ * @returns {Error}  403 - Forbidden
+ * @returns {Error}  500 - Server error
+ */
 app.get('/generate-report', (req, res) => {
     const currentUserRole = req.query.currentUserRole;
     if (!['Менеджер', 'Администратор'].includes(currentUserRole)) {
@@ -830,23 +1152,14 @@ app.get('/generate-report', (req, res) => {
     });
 });
 
-db.all('SELECT id, password FROM users', async (err, rows) => {
-    if (err) {
-        console.error('Ошибка при получении пользователей:', err);
-        return;
-    }
-    for (const row of rows) {
-        // Check if the password is already hashed (bcrypt hashes start with $)
-        if (!row.password.startsWith('$')) {
-            const hashedPassword = await bcrypt.hash(row.password, 10);
-            db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, row.id], (err) => {
-                if (err) console.error(`Ошибка при обновлении пароля для ID ${row.id}:`, err);
-                else console.log(`Пароль для ID ${row.id} успешно обновлен`);
-            });
-        }
-    }
-});
-// Экспорт отчета в Excel с модификаторами затрат
+/**
+ * @route GET /export-report
+ * @group Reports - Operations about reports
+ * @param {string} currentUserRole.query.required - the role of the current user
+ * @returns {file} 200 - An Excel file
+ * @returns {Error}  403 - Forbidden
+ * @returns {Error}  500 - Server error
+ */
 app.get('/export-report', (req, res) => {
     const currentUserRole = req.query.currentUserRole;
     if (!['Менеджер', 'Администратор'].includes(currentUserRole)) {
